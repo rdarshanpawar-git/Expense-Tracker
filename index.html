@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Expense Tracker</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Tracker">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Monthly Tracker</h1>
+        
+        <input type="month" id="monthSelector">
+
+        <div class="card">
+            <h3>Income</h3>
+            <input type="number" id="incomeInput" placeholder="Set Monthly Income">
+            <button onclick="setIncome()">Save Income</button>
+        </div>
+
+        <div class="card">
+            <h3>Add Expense</h3>
+            <input type="text" id="expenseName" placeholder="Description (e.g., Groceries)">
+            <input type="number" id="expenseAmount" placeholder="Amount">
+            <select id="expenseCategory">
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+            </select>
+            <button onclick="addExpense()">Add</button>
+        </div>
+
+        <div class="card">
+            <h3>Income vs Expenses</h3>
+            <canvas id="expenseChart"></canvas>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register the Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
