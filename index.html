@@ -34,10 +34,13 @@
         </div>
 
         <div id="tabHome">
-            <h1>Overview</h1>
-            <div class="subtitle">Track your spending</div>
             
             <input type="month" id="monthSelector">
+
+            <div class="balance-card">
+                <p>Available Balance</p>
+                <h2 id="currentBalance">₹0</h2>
+            </div>
 
             <div class="card">
                 <h3>Budget Breakdown</h3>
@@ -54,15 +57,18 @@
 
             <div class="card">
                 <h3>New Transaction</h3>
-                <input type="text" id="expenseName" placeholder="What did you buy?">
+                <input type="text" id="expenseName" placeholder="Description (e.g., Groceries)">
                 <input type="number" id="expenseAmount" placeholder="Amount (₹)">
-                <select id="expenseCategory">
-                    <option value="Food">🍔 Food & Dining</option>
-                    <option value="Transport">🚗 Transportation</option>
-                    <option value="Utilities">💡 Utilities & Bills</option>
-                    <option value="Shopping">🛍️ Shopping</option>
-                    <option value="Other">✨ Other</option>
-                </select>
+                
+                <input type="text" id="expenseCategory" list="categoryOptions" placeholder="Category (Select or Type Custom)">
+                <datalist id="categoryOptions">
+                    <option value="Food & Dining">
+                    <option value="Transportation">
+                    <option value="Utilities & Bills">
+                    <option value="Shopping">
+                    <option value="Entertainment">
+                </datalist>
+
                 <button onclick="addExpense()">Add Transaction</button>
             </div>
 

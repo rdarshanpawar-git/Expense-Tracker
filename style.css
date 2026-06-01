@@ -1,3 +1,4 @@
+/* iOS System Palette & Foundations */
 :root {
     --bg-color: #f2f2f7;
     --card-bg: #ffffff;
@@ -24,12 +25,12 @@ body {
     padding: 20px 16px 80px 16px;
 }
 
-/* Typography */
+/* Headings & Text UI */
 h1 { font-size: 28px; font-weight: 700; margin-top: 20px; margin-bottom: 5px; }
 .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
 h3 { margin-top: 0; font-size: 18px; font-weight: 600; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 
-/* Navigation Tabs */
+/* Navigation segment slider styles */
 .nav-bar {
     display: flex;
     background: #e3e3e8;
@@ -41,9 +42,13 @@ h3 { margin-top: 0; font-size: 18px; font-weight: 600; margin-bottom: 16px; bord
 .nav-btn {
     flex: 1;
     background: transparent;
+    border: none;
     color: var(--text-primary);
     padding: 10px;
     font-size: 15px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
 }
 .nav-btn.active {
     background: white;
@@ -51,7 +56,20 @@ h3 { margin-top: 0; font-size: 18px; font-weight: 600; margin-bottom: 16px; bord
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Cards & Inputs */
+/* Premium Gradient Balance Card */
+.balance-card {
+    background: linear-gradient(135deg, var(--accent-blue), #005bb5);
+    color: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3);
+}
+.balance-card p { margin: 0 0 8px 0; font-size: 14px; opacity: 0.9; font-weight: 500; }
+.balance-card h2 { margin: 0; font-size: 36px; font-weight: 700; }
+
+/* Content Cards & Forms */
 .card {
     background-color: var(--card-bg);
     border-radius: 16px;
@@ -60,7 +78,7 @@ h3 { margin-top: 0; font-size: 18px; font-weight: 600; margin-bottom: 16px; bord
     box-shadow: 0 4px 14px rgba(0,0,0,0.05);
 }
 
-input[type="month"], input[type="number"], input[type="text"], input[type="password"], select {
+input[type="month"], input[type="number"], input[type="text"], input[type="password"] {
     width: 100%;
     padding: 14px;
     margin-bottom: 12px;
@@ -92,9 +110,9 @@ button {
     width: 100%;
     cursor: pointer;
 }
-button:active { background-color: #005bb5; }
+button:active { background-color: #00bb5; }
 
-/* Lists & Charts */
+/* Item Row Interactivity */
 .expense-item, .statement-item {
     display: flex;
     justify-content: space-between;
@@ -110,7 +128,7 @@ button:active { background-color: #005bb5; }
 .statement-amount.positive { color: var(--green); }
 .chart-container { position: relative; height: 250px; width: 100%; }
 
-/* Login Overlay */
+/* Security Overlay Screen */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: var(--bg-color);
