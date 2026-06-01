@@ -70,6 +70,8 @@ function switchTab(tab) {
 }
 
 // --- ACTIVE TRANSACTION METRICS ---
+let editingExpenseId = null; // Tracks if we are editing an item
+
 function loadData() {
     currentMonth = document.getElementById('monthSelector').value;
     localStorage.setItem('last_visited_month', currentMonth);
@@ -102,7 +104,22 @@ function addExpense() {
     if (!name || !amount) return alert("Please clarify item details and pricing.");
 
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
-    data.expenses.unshift({ id: Date.now(), name, amount, category }); 
+    
+    if (editingExpenseId) {
+        // Update existing transaction
+        const index = data.expenses.findIndex(exp => exp.id === editingExpenseId);
+        if (index !== -1) {
+            data.expenses[index] = { id: editingExpenseId, name, amount, category };
+        }
+        editingExpenseId = null;
+        
+        // Reset button text
+        const addBtn = document.getElementById('addBtn');
+        if (addBtn) addBtn.innerText = "Add Transaction";
+    } else {
+        // Add new transaction
+        data.expenses.unshift({ id: Date.now(), name, amount, category }); 
+    }
     
     localStorage.setItem(currentMonth, JSON.stringify(data));
     
@@ -110,6 +127,34 @@ function addExpense() {
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
     document.getElementById('expenseCategory').value = '';
+    loadData();
+}
+
+function editExpense(id) {
+    const data = JSON.parse(localStorage.getItem(currentMonth));
+    const expense = data.expenses.find(exp => exp.id === id);
+    
+    if (expense) {
+        document.getElementById('expenseName').value = expense.name;
+        document.getElementById('expenseAmount').value = expense.amount;
+        document.getElementById('expenseCategory').value = expense.category;
+        
+        editingExpenseId = id;
+        
+        // Change button text
+        const addBtn = document.getElementById('addBtn');
+        if (addBtn) addBtn.innerText = "Update Transaction";
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+    }
+}
+
+function deleteExpense(id) {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+    
+    const data = JSON.parse(localStorage.getItem(currentMonth));
+    data.expenses = data.expenses.filter(exp => exp.id !== id);
+    localStorage.setItem(currentMonth, JSON.stringify(data));
     loadData();
 }
 
@@ -130,7 +175,13 @@ function renderExpenseList(expenses) {
                 <span class="expense-name">${exp.name}</span>
                 <span class="expense-category">${exp.category}</span>
             </div>
-            <span class="expense-amount">-${formatMoney(exp.amount)}</span>
+            <div style="display: flex; align-items: center;">
+                <span class="expense-amount" style="margin-right: 10px;">-${formatMoney(exp.amount)}</span>
+                <div class="action-btns">
+                    <button onclick="editExpense(${exp.id})" class="icon-btn edit-btn">✎</button>
+                    <button onclick="deleteExpense(${exp.id})" class="icon-btn delete-btn">✖</button>
+                </div>
+            </div>
         `;
         listContainer.appendChild(item);
     });
