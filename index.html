@@ -15,44 +15,69 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Overview</h1>
-        <div class="subtitle">Track your spending</div>
-        
-        <input type="month" id="monthSelector">
 
-        <div class="card">
-            <h3>Budget Breakdown</h3>
-            <div class="chart-container">
-                <canvas id="expenseChart"></canvas>
+    <div id="loginScreen" class="overlay">
+        <div class="login-card">
+            <h2 id="loginTitle">Welcome Back</h2>
+            <p class="subtitle" id="loginSubtitle">Enter your 4-digit PIN</p>
+            <input type="password" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
+            <button onclick="handleLogin()">Unlock</button>
+            <p id="loginError" class="error-text hidden">Incorrect PIN</p>
+        </div>
+    </div>
+
+    <div class="container hidden" id="mainApp">
+        
+        <div class="nav-bar">
+            <button class="nav-btn active" id="navHome" onclick="switchTab('home')">Dashboard</button>
+            <button class="nav-btn" id="navHistory" onclick="switchTab('history')">Statements</button>
+        </div>
+
+        <div id="tabHome">
+            <h1>Overview</h1>
+            <div class="subtitle">Track your spending</div>
+            
+            <input type="month" id="monthSelector">
+
+            <div class="card">
+                <h3>Budget Breakdown</h3>
+                <div class="chart-container">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Monthly Budget</h3>
+                <input type="number" id="incomeInput" placeholder="Enter Total Income (₹)">
+                <button onclick="setIncome()">Update Income</button>
+            </div>
+
+            <div class="card">
+                <h3>New Transaction</h3>
+                <input type="text" id="expenseName" placeholder="What did you buy?">
+                <input type="number" id="expenseAmount" placeholder="Amount (₹)">
+                <select id="expenseCategory">
+                    <option value="Food">🍔 Food & Dining</option>
+                    <option value="Transport">🚗 Transportation</option>
+                    <option value="Utilities">💡 Utilities & Bills</option>
+                    <option value="Shopping">🛍️ Shopping</option>
+                    <option value="Other">✨ Other</option>
+                </select>
+                <button onclick="addExpense()">Add Transaction</button>
+            </div>
+
+            <div class="card">
+                <h3>Recent Transactions</h3>
+                <div id="expenseList"></div>
             </div>
         </div>
 
-        <div class="card">
-            <h3>Monthly Budget</h3>
-            <input type="number" id="incomeInput" placeholder="Enter Total Income ($)">
-            <button onclick="setIncome()">Update Income</button>
+        <div id="tabHistory" class="hidden">
+            <h1>Past Statements</h1>
+            <div class="subtitle">Your previous monthly records</div>
+            <div id="statementsList"></div>
         </div>
 
-        <div class="card">
-            <h3>New Transaction</h3>
-            <input type="text" id="expenseName" placeholder="What did you buy?">
-            <input type="number" id="expenseAmount" placeholder="Amount ($)">
-            <select id="expenseCategory">
-                <option value="Food">🍔 Food & Dining</option>
-                <option value="Transport">🚗 Transportation</option>
-                <option value="Utilities">💡 Utilities & Bills</option>
-                <option value="Shopping">🛍️ Shopping</option>
-                <option value="Other">✨ Other</option>
-            </select>
-            <button onclick="addExpense()">Add Transaction</button>
-        </div>
-
-        <div class="card">
-            <h3>Recent Transactions</h3>
-            <div id="expenseList">
-                </div>
-        </div>
     </div>
 
     <script src="app.js"></script>
