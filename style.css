@@ -144,54 +144,39 @@ button:active { background-color: #005bb5; }
 .hidden { display: none !important; }
 
 /* Edit and Delete Buttons */
-.action-btns {
-    display: flex;
-    gap: 8px;
-    margin-left: 10px;
-}
-.icon-btn {
-    padding: 6px 10px;
-    width: auto;
-    border-radius: 8px;
-    font-size: 14px;
-    background: #f2f2f7;
-    color: var(--text-primary);
-}
+.action-btns { display: flex; gap: 8px; margin-left: 10px; }
+.icon-btn { padding: 6px 10px; width: auto; border-radius: 8px; font-size: 14px; background: #f2f2f7; color: var(--text-primary); }
 .edit-btn { color: var(--accent-blue); }
 .delete-btn { color: var(--red); }
 .icon-btn:active { background: #e5e5ea; }
 
 /* Export Console & Checkboxes */
+.flex-column { display: flex; flex-direction: column; }
 .checkbox-container {
-    max-height: 150px; 
-    overflow-y: auto; 
-    margin-bottom: 15px; 
-    border: 1px solid var(--border-color); 
-    border-radius: 8px; 
-    padding: 10px; 
-    background: #fafafa;
+    max-height: 150px; overflow-y: auto; margin-bottom: 15px; 
+    border: 1px solid var(--border-color); border-radius: 8px; 
+    padding: 10px; background: #fafafa;
 }
-.checkbox-row { 
-    display: flex; 
-    align-items: center; 
-    margin-bottom: 10px; 
-    font-size: 15px; 
+.checkbox-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 15px; }
+.checkbox-row input[type="checkbox"] { width: auto; margin: 0 12px 0 0; transform: scale(1.3); }
+.checkbox-row label { cursor: pointer; }
+.flex-row { display: flex; gap: 10px; }
+.btn-green { background-color: var(--green); }
+.btn-green:active { background-color: #2da94f; }
+
+/* --- GRAPHICAL PDF PRINT ENGINE --- */
+#mainApp.printing { padding: 0; }
+#mainApp.printing .card, #mainApp.printing h1, #mainApp.printing h3, #mainApp.printing .nav-bar, #mainApp.printing .subtitle, #mainApp.printing .checkbox-container {
+    box-shadow: none; border: none; padding: 0; margin: 0; background: transparent;
 }
-.checkbox-row input[type="checkbox"] { 
-    width: auto; 
-    margin: 0 12px 0 0; 
-    transform: scale(1.3); 
+#mainApp.printing .nav-bar, #mainApp.printing .checkbox-container, #mainApp.printing .flex-row button, #mainApp.printing .flex-column > button, #mainApp.printing h1, #mainApp.printing .subtitle:not(#printReport h1 + .subtitle), #mainApp.printing .expense-item button, #mainApp.printing .action-btns {
+    display: none !important;
 }
-.checkbox-row label {
-    cursor: pointer;
-}
-.flex-row { 
-    display: flex; 
-    gap: 10px; 
-}
-.btn-green { 
-    background-color: var(--green); 
-}
-.btn-green:active { 
-    background-color: #2da94f; 
-}
+#printReport { width: 100%; background-color: white; padding: 20px; }
+.print-month-section { page-break-after: always; margin-bottom: 40px; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
+.print-month-section h2 { font-size: 24px; color: var(--accent-blue); margin-bottom: 15px; }
+.print-summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
+.print-summary-label { font-weight: 600; color: var(--text-secondary); }
+.print-summary-value { font-weight: 700; color: var(--text-primary); }
+.print-summary-value.positive { color: var(--green); }
+.print-summary-value.negative { color: var(--red); }
