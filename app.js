@@ -131,14 +131,6 @@ function resetPin() {
     alert('PIN cleared. Please create a new PIN to continue.');
 }
 
-function unregisterServiceWorkers() {
-    if (!('serviceWorker' in navigator)) return alert('Service Worker not supported in this browser');
-    navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-        alert('Service workers unregistered. The app will reload.');
-        location.reload();
-    }).catch(err => alert('Failed to unregister service workers: ' + err.message));
-}
 
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
