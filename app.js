@@ -541,9 +541,13 @@ function generatePrintReport() {
     // Create a temporary container for PDF content
     const pdfContainer = document.createElement('div');
     pdfContainer.id = 'pdfReportContent';
-    pdfContainer.style.position = 'absolute';
-    pdfContainer.style.left = '-9999px';
+    pdfContainer.style.position = 'fixed';
+    pdfContainer.style.left = '0';
+    pdfContainer.style.top = '0';
     pdfContainer.style.width = '800px';
+    pdfContainer.style.opacity = '0';
+    pdfContainer.style.pointerEvents = 'none';
+    pdfContainer.style.zIndex = '9999';
     pdfContainer.style.backgroundColor = '#ffffff';
     pdfContainer.style.padding = '40px';
     pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -775,9 +779,13 @@ function exportSplitPDF() {
     // Create a temporary container for PDF content
     const pdfContainer = document.createElement('div');
     pdfContainer.id = 'splitPdfContent';
-    pdfContainer.style.position = 'absolute';
-    pdfContainer.style.left = '-9999px';
+    pdfContainer.style.position = 'fixed';
+    pdfContainer.style.left = '0';
+    pdfContainer.style.top = '0';
     pdfContainer.style.width = '800px';
+    pdfContainer.style.opacity = '0';
+    pdfContainer.style.pointerEvents = 'none';
+    pdfContainer.style.zIndex = '9999';
     pdfContainer.style.backgroundColor = '#ffffff';
     pdfContainer.style.padding = '40px';
     pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -859,3 +867,329 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSplitParticipantFields();
     }
 });
+
+// --- SPLIT GROUP MANAGEMENT ---
+function loadSplitGroups() {
+    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
+    const sel = document.getElementById('splitGroupSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.text = g.name;
+        sel.appendChild(opt);
+    });
+    if (groups.length === 0) {
+        const opt = document.createElement('option'); opt.value = ''; opt.text = 'No groups yet'; sel.appendChild(opt);
+    }
+}
+
+function createSplitGroup() {
+    const name = document.getElementById('newSplitGroupName').value.trim();
+    if (!name) return alert('Enter a group name');
+    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
+    const id = Date.now().toString();
+    groups.push({ id, name, createdAt: new Date().toISOString() });
+    localStorage.setItem('split_groups', JSON.stringify(groups));
+    document.getElementById('newSplitGroupName').value = '';
+    loadSplitGroups();
+    alert('Group created');
+}
+
+function addSplitToGroup() {
+    const groupId = document.getElementById('splitGroupSelect').value;
+    if (!groupId) return alert('Select a group (or create one) first');
+
+    const expenseName = document.getElementById('splitExpenseName').value.trim();
+    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
+    if (!expenseName || !totalAmount || totalAmount <= 0) return alert('Enter an expense name and valid amount');
+
+    const participants = [];
+    document.querySelectorAll('.split-participant-name').forEach(input => {
+        if (input.value.trim()) participants.push({ name: input.value.trim(), paid: false });
+    });
+    if (participants.length < 2) return alert('Add at least two participants');
+
+    const share = parseFloat((totalAmount / participants.length).toFixed(2));
+    const expense = {
+        id: Date.now().toString(),
+        name: expenseName,
+        total: totalAmount,
+        participants: participants.map(p => ({ name: p.name, share, paid: false })),
+        createdAt: new Date().toISOString()
+    };
+
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    list.unshift(expense);
+    localStorage.setItem(key, JSON.stringify(list));
+    loadGroupExpenses(groupId);
+    alert('Split expense added to group');
+}
+
+function loadGroupExpenses(groupId) {
+    if (!groupId) return;
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    renderGroupExpenses(groupId, list);
+}
+
+function renderGroupExpenses(groupId, expenses) {
+    const container = document.getElementById('splitGroupExpensesList');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!expenses || expenses.length === 0) {
+        container.innerHTML = '<p style="color:#8e8e93">No split expenses for this group.</p>';
+        return;
+    }
+
+    expenses.forEach(exp => {
+        const card = document.createElement('div');
+        card.className = 'card split-group-expense';
+        card.style.marginBottom = '8px';
+
+        let participantsHtml = '';
+        exp.participants.forEach((p, idx) => {
+            const paidAmount = p.paidAmount ? parseFloat(p.paidAmount) : 0;
+            participantsHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom: 1px solid #eee; gap:12px;">
+                    <div style="flex:1">${idx+1}. ${p.name}</div>
+                    <div style="width:110px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:6px; border-radius:6px;">
+                    </div>
+                    <div style="width:110px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:6px; border-radius:6px;">
+                    </div>
+                    <div style="width:36px; text-align:center;">
+                        <input type=checkbox data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)">
+                    </div>
+                </div>
+            `;
+        });
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:700;">${exp.name}</div>
+                    <div style="font-size:12px; color:#8e8e93;">Total: ${formatMoney(exp.total)} • ${new Date(exp.createdAt).toLocaleString()}</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="equalizeShares('${groupId}','${exp.id}')">Equalize</button>
+                    <button onclick="deleteGroupExpense('${groupId}','${exp.id}')" style="background:#ff3b30;">Delete</button>
+                </div>
+            </div>
+            <div style="margin-top:10px;">
+                <div style="display:flex; gap:12px; font-size:12px; color:#8e8e93; margin-bottom:6px;">
+                    <div style="flex:1">Participant</div>
+                    <div style="width:110px; text-align:right;">Share (₹)</div>
+                    <div style="width:110px; text-align:right;">Paid (₹)</div>
+                    <div style="width:36px; text-align:center;">Done</div>
+                </div>
+                ${participantsHtml}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function saveParticipantShare(input) {
+    const groupId = input.dataset.group;
+    const expId = input.dataset.exp;
+    const idx = parseInt(input.dataset.idx, 10);
+    const val = parseFloat(input.value) || 0;
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    const exp = list.find(e => e.id === expId);
+    if (!exp) return;
+    exp.participants[idx].share = val;
+    // if paidAmount > share, cap it
+    const paid = parseFloat(exp.participants[idx].paidAmount || 0);
+    if (paid > val) exp.participants[idx].paidAmount = val;
+    localStorage.setItem(key, JSON.stringify(list));
+}
+
+function saveParticipantPaidAmount(input) {
+    const groupId = input.dataset.group;
+    const expId = input.dataset.exp;
+    const idx = parseInt(input.dataset.idx, 10);
+    const val = parseFloat(input.value) || 0;
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    const exp = list.find(e => e.id === expId);
+    if (!exp) return;
+    exp.participants[idx].paidAmount = val;
+    exp.participants[idx].paid = val >= (exp.participants[idx].share || 0);
+    localStorage.setItem(key, JSON.stringify(list));
+}
+
+function equalizeShares(groupId, expId) {
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    const exp = list.find(e=>e.id===expId);
+    if (!exp) return;
+    const cnt = exp.participants.length;
+    const share = parseFloat((exp.total / cnt).toFixed(2));
+    exp.participants.forEach(p => { p.share = share; if (p.paidAmount && p.paidAmount > share) p.paidAmount = share; p.paid = (p.paidAmount && p.paidAmount >= share) || false; });
+    localStorage.setItem(key, JSON.stringify(list));
+    loadGroupExpenses(groupId);
+}
+
+function toggleParticipantPaid(checkbox) {
+    const groupId = checkbox.dataset.group;
+    const expId = checkbox.dataset.exp;
+    const idx = parseInt(checkbox.dataset.idx, 10);
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    const exp = list.find(e=>e.id===expId);
+    if (!exp) return;
+    exp.participants[idx].paid = checkbox.checked;
+    localStorage.setItem(key, JSON.stringify(list));
+}
+
+function deleteGroupExpense(groupId, expId) {
+    if (!confirm('Delete this split expense?')) return;
+    const key = `split_group_${groupId}`;
+    let list = JSON.parse(localStorage.getItem(key)) || [];
+    list = list.filter(e => e.id !== expId);
+    localStorage.setItem(key, JSON.stringify(list));
+    loadGroupExpenses(groupId);
+}
+
+function generateSelectedGroupReport() {
+    const groupId = document.getElementById('splitGroupSelect').value;
+    if (!groupId) return alert('Select a group first');
+    generateGroupReportPDF(groupId);
+}
+
+function generateGroupReportPDF(groupId) {
+    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
+    const group = groups.find(g=>g.id===groupId);
+    if (!group) return alert('Group not found');
+    const key = `split_group_${groupId}`;
+    const expenses = JSON.parse(localStorage.getItem(key)) || [];
+
+    // compute totals per participant (supports partial paid amounts)
+    const map = {};
+    expenses.forEach(exp => {
+        exp.participants.forEach(p => {
+            if (!map[p.name]) map[p.name] = { owed: 0, paid: 0 };
+            const share = parseFloat(p.share) || 0;
+            const paidAmt = p.paidAmount ? parseFloat(p.paidAmount) : (p.paid ? share : 0);
+            map[p.name].owed += share;
+            map[p.name].paid += paidAmt;
+        });
+    });
+
+    // Build HTML
+    let html = `
+        <div style="padding:30px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto, sans-serif;">
+            <div style="text-align:center; margin-bottom:20px;">
+                <h1 style="margin:0;">${group.name} — Split Report</h1>
+                <p style="color:#8e8e93; margin:6px 0;">Generated: ${new Date().toLocaleString()}</p>
+            </div>
+            <h3 style="margin-top:20px;">Participant Summary</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead><tr style="background:#f2f2f7;"><th style="text-align:left; padding:10px;">Participant</th><th style="text-align:right; padding:10px;">Owed</th><th style="text-align:right; padding:10px;">Paid</th><th style="text-align:right; padding:10px;">Remaining</th></tr></thead>
+                <tbody>
+    `;
+    Object.keys(map).forEach(name => {
+        const owed = map[name].owed;
+        const paid = map[name].paid;
+        const rem = owed - paid;
+        html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">${name}</td><td style="padding:10px; text-align:right;">${formatMoney(owed)}</td><td style="padding:10px; text-align:right;">${formatMoney(paid)}</td><td style="padding:10px; text-align:right;">${formatMoney(rem)}</td></tr>`;
+    });
+
+    html += `</tbody></table><h3 style="margin-top:20px;">Expenses</h3>`;
+
+    expenses.forEach(exp=>{
+        html += `
+            <div style="border:1px solid #eee; padding:12px; border-radius:8px; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:700">${exp.name}</div><div style="font-weight:700; color:#ff3b30;">${formatMoney(exp.total)}</div></div>
+                <div style="margin-top:8px;">
+                    ${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0;'><div>${p.name}${p.paid? ' ✓':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+
+    const container = document.createElement('div');
+    container.id = 'groupPdfContent';
+    // Place the container in the viewport but invisible so html2canvas can render it reliably
+    container.style.position = 'fixed';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.width = '800px';
+    container.style.opacity = '0';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '9999';
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    const opt = {
+        margin: [10,10,10,10],
+        filename: `${group.name.replace(/\s+/g,'_')}_Split_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:{ type:'jpeg', quality:0.98 },
+        html2canvas:{ scale:2, useCORS:true },
+        jsPDF:{ orientation:'portrait', unit:'mm', format:'a4' }
+    };
+
+    html2pdf().set(opt).from(container).save().then(()=>{
+        container.remove();
+    }).catch(err=>{ console.error(err); container.remove(); alert('Failed to export group PDF'); });
+}
+
+// Initialize groups on load
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('splitParticipantsList')) updateSplitParticipantFields();
+    loadSplitGroups();
+    const sel = document.getElementById('splitGroupSelect'); if (sel && sel.value) loadGroupExpenses(sel.value);
+});
+
+// --- In-browser smoke test for PDF generation ---
+async function runPdfSmokeCheck() {
+    try {
+        console.log('Running PDF smoke-check...');
+        // prepare test data
+        localStorage.setItem('split_groups', JSON.stringify([{id:'test_g', name:'Smoke Test Group'}]));
+        localStorage.setItem('split_group_test_g', JSON.stringify([
+            { id: 'test_e1', name: 'Dinner', total: 300, participants: [ {name:'Alice', share:100, paidAmount:50, paid:false}, {name:'Bob', share:100, paidAmount:100, paid:true}, {name:'Charlie', share:100, paidAmount:0, paid:false}], createdAt: new Date().toISOString() }
+        ]));
+
+        if (window.loadSplitGroups) loadSplitGroups();
+        if (window.loadGroupExpenses) loadGroupExpenses('test_g');
+
+        // ensure html2pdf doesn't try to download — patch for test
+        const orig = window.html2pdf;
+        window.html2pdf = function(){
+            return { set: function(){ return { from: function(){ return { save: function(){ return new Promise(resolve=>setTimeout(resolve,1000)); } } } } };
+        };
+
+        // trigger generation
+        if (window.generateGroupReportPDF) generateGroupReportPDF('test_g');
+
+        // wait for container
+        await new Promise((res, rej)=>{
+            let tries = 0;
+            const iv = setInterval(()=>{
+                const c = document.getElementById('groupPdfContent');
+                if (c) { clearInterval(iv); res(c.innerText.slice(0,1000)); }
+                if (++tries > 10) { clearInterval(iv); rej(new Error('Timeout waiting for PDF content')); }
+            }, 300);
+        }).then(preview => {
+            console.log('PDF content preview:\n', preview);
+            let out = document.getElementById('smokeTestResult');
+            if (!out) { out = document.createElement('pre'); out.id = 'smokeTestResult'; out.style.padding='12px'; out.style.background='#fff3'; out.style.margin='12px 0'; document.body.appendChild(out); }
+            out.textContent = 'PDF content preview:\n' + preview;
+        }).catch(err=>{ console.error(err); alert('Smoke-check failed: '+err.message); });
+
+        // restore html2pdf
+        window.html2pdf = orig;
+        console.log('Smoke-check complete.');
+    } catch (e) {
+        console.error('Smoke-check error', e);
+        alert('Smoke-check error: ' + e.message);
+    }
+}

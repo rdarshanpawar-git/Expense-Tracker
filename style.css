@@ -295,3 +295,8 @@ button:active { background-color: #005bb5; }
     font-size: 14px;
     color: var(--text-secondary);
 }
+
+/* Split Group List */
+.split-group-expense { margin-bottom: 10px; }
+.split-group-expense .participant-paid { text-decoration: line-through; color: #8e8e93; }
+.update-banner { display: none; }

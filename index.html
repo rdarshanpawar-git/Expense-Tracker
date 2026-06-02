@@ -188,6 +188,28 @@
         </div>
 
         <div class="card">
+            <h3>Split Group Manager</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <select id="splitGroupSelect" onchange="loadGroupExpenses(this.value)" style="padding: 12px; border-radius: 8px;"></select>
+                <input id="newSplitGroupName" placeholder="New group name" style="padding: 12px; border-radius: 8px;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                <button onclick="createSplitGroup()">Create Group</button>
+                <button onclick="addSplitToGroup()" style="background-color: #34c759;">Add This Split to Group</button>
+                <button onclick="runPdfSmokeCheck()" style="background-color:#ff9500;">Run PDF Smoke Test</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Group Split Expenses</h3>
+            <div id="splitGroupExpensesList" style="min-height: 60px;">No group selected or no split expenses yet.</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+                <button onclick="loadGroupExpenses(document.getElementById('splitGroupSelect').value)">Refresh List</button>
+                <button onclick="generateSelectedGroupReport()" style="background-color: #5856d6;">Generate Group Report (PDF)</button>
+            </div>
+        </div>
+
+        <div class="card">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button onclick="resetSplitForm()" style="background-color: #999;">Reset</button>
                 <button onclick="generateSplitSummary()" style="background-color: #34c759;">Generate & Share</button>
