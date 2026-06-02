@@ -110,7 +110,7 @@ button {
     width: 100%;
     cursor: pointer;
 }
-button:active { background-color: #00bb5; }
+button:active { background-color: #005bb5; }
 
 /* Item Row Interactivity */
 .expense-item, .statement-item {
@@ -160,3 +160,38 @@ button:active { background-color: #00bb5; }
 .edit-btn { color: var(--accent-blue); }
 .delete-btn { color: var(--red); }
 .icon-btn:active { background: #e5e5ea; }
+
+/* Export Console & Checkboxes */
+.checkbox-container {
+    max-height: 150px; 
+    overflow-y: auto; 
+    margin-bottom: 15px; 
+    border: 1px solid var(--border-color); 
+    border-radius: 8px; 
+    padding: 10px; 
+    background: #fafafa;
+}
+.checkbox-row { 
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    font-size: 15px; 
+}
+.checkbox-row input[type="checkbox"] { 
+    width: auto; 
+    margin: 0 12px 0 0; 
+    transform: scale(1.3); 
+}
+.checkbox-row label {
+    cursor: pointer;
+}
+.flex-row { 
+    display: flex; 
+    gap: 10px; 
+}
+.btn-green { 
+    background-color: var(--green); 
+}
+.btn-green:active { 
+    background-color: #2da94f; 
+}
