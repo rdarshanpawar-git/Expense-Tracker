@@ -67,6 +67,21 @@
                 <datalist id="categoryOptions">
                     </datalist>
 
+                <div style="margin-top: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="splitToggle" onchange="toggleSplitMode()">
+                        <span>Split this expense?</span>
+                    </label>
+                </div>
+
+                <div id="splitSection" style="display: none; margin-top: 12px; padding: 12px; background: #f9f9fb; border-radius: 10px;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: #666;">Number of people:</label>
+                        <input type="number" id="splitCount" placeholder="2" value="2" min="2" max="10" onchange="updateSplitFields()" style="margin-top: 4px;">
+                    </div>
+                    <div id="splitParticipants"></div>
+                </div>
+
                 <button id="addBtn" onclick="addExpense()">Add Transaction</button>
             </div>
 

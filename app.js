@@ -83,6 +83,33 @@ function switchTab(tab) {
 // --- ACTIVE TRANSACTION METRICS ---
 let editingExpenseId = null;
 
+function toggleSplitMode() {
+    const splitSection = document.getElementById('splitSection');
+    const toggle = document.getElementById('splitToggle');
+    if (toggle.checked) {
+        splitSection.style.display = 'block';
+        updateSplitFields();
+    } else {
+        splitSection.style.display = 'none';
+    }
+}
+
+function updateSplitFields() {
+    const count = parseInt(document.getElementById('splitCount').value) || 2;
+    const container = document.getElementById('splitParticipants');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        div.innerHTML = `
+            <label style="font-size: 12px; color: #666;">Person ${i + 1}:</label>
+            <input type="text" class="split-name" placeholder="Name" style="width: 100%; margin-top: 4px;">
+        `;
+        container.appendChild(div);
+    }
+}
+
 function loadData() {
     currentMonth = document.getElementById('monthSelector').value;
     localStorage.setItem('last_visited_month', currentMonth);
@@ -120,15 +147,36 @@ function addExpense() {
         loadCategories();
     }
 
+    let splitData = null;
+    if (document.getElementById('splitToggle').checked) {
+        const participants = [];
+        document.querySelectorAll('.split-name').forEach(input => {
+            if (input.value.trim()) {
+                participants.push(input.value.trim());
+            }
+        });
+        
+        if (participants.length < 2) {
+            return alert("Enter at least 2 participants for split expense.");
+        }
+        
+        const sharePerPerson = amount / participants.length;
+        splitData = {
+            isplit: true,
+            participants: participants,
+            sharePerPerson: parseFloat(sharePerPerson.toFixed(2))
+        };
+    }
+
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
     
     if (editingExpenseId) {
         const index = data.expenses.findIndex(exp => exp.id === editingExpenseId);
-        if (index !== -1) data.expenses[index] = { id: editingExpenseId, name, amount, category };
+        if (index !== -1) data.expenses[index] = { id: editingExpenseId, name, amount, category, split: splitData };
         editingExpenseId = null;
         document.getElementById('addBtn').innerText = "Add Transaction";
     } else {
-        data.expenses.unshift({ id: Date.now(), name, amount, category }); 
+        data.expenses.unshift({ id: Date.now(), name, amount, category, split: splitData }); 
     }
     
     localStorage.setItem(currentMonth, JSON.stringify(data));
@@ -136,6 +184,9 @@ function addExpense() {
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
     document.getElementById('expenseCategory').value = '';
+    document.getElementById('splitToggle').checked = false;
+    document.getElementById('splitSection').style.display = 'none';
+    document.getElementById('splitParticipants').innerHTML = '';
     loadData();
 }
 
@@ -146,6 +197,19 @@ function editExpense(id) {
         document.getElementById('expenseName').value = expense.name;
         document.getElementById('expenseAmount').value = expense.amount;
         document.getElementById('expenseCategory').value = expense.category;
+        
+        // Restore split data if exists
+        if (expense.split && expense.split.isplit) {
+            document.getElementById('splitToggle').checked = true;
+            document.getElementById('splitCount').value = expense.split.participants.length;
+            document.getElementById('splitSection').style.display = 'block';
+            updateSplitFields();
+            const inputs = document.querySelectorAll('.split-name');
+            expense.split.participants.forEach((name, idx) => {
+                if (inputs[idx]) inputs[idx].value = name;
+            });
+        }
+        
         editingExpenseId = id;
         document.getElementById('addBtn').innerText = "Update Transaction";
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -170,10 +234,22 @@ function renderExpenseList(expenses) {
     expenses.forEach(exp => {
         const item = document.createElement('div');
         item.className = 'expense-item';
+        
+        let splitInfo = '';
+        if (exp.split && exp.split.isplit) {
+            splitInfo = `
+                <div style="font-size: 12px; color: #666; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e5ea;">
+                    <strong>Split between:</strong> ${exp.split.participants.join(', ')}<br>
+                    <strong>Each pays:</strong> ${formatMoney(exp.split.sharePerPerson)}
+                </div>
+            `;
+        }
+        
         item.innerHTML = `
             <div class="expense-info">
                 <span class="expense-name">${exp.name}</span>
                 <span class="expense-category">${exp.category}</span>
+                ${splitInfo}
             </div>
             <div style="display: flex; align-items: center;">
                 <span class="expense-amount" style="margin-right: 10px;">-${formatMoney(exp.amount)}</span>
