@@ -55,13 +55,13 @@
             <div class="home-card" onclick="openExpenseTracker()">
                 <div class="home-icon">💰</div>
                 <h2>Expense Tracker</h2>
-                <p>Track your monthly income and expenses</p>
+                <p>Track your personal income and monthly budget</p>
             </div>
 
             <div class="home-card" onclick="openSplitExpense()">
                 <div class="home-icon">👥</div>
-                <h2>Split Expense</h2>
-                <p>Split and share expenses with friends</p>
+                <h2>Group Split</h2>
+                <p>Track shared bills and settle up with friends</p>
             </div>
 
             <button class="btn btn-outline" style="margin-top: 30px;" onclick="logout()">Secure Logout</button>
@@ -101,7 +101,6 @@
                 <h3>New Transaction</h3>
                 <input type="text" id="expenseName" placeholder="Description (e.g., Groceries)">
                 <input type="number" id="expenseAmount" placeholder="Amount (₹)">
-                
                 <input type="text" id="expenseCategory" list="categoryOptions" placeholder="Category (Select or Type Custom)">
                 <datalist id="categoryOptions"></datalist>
 
@@ -125,10 +124,10 @@
                 <div id="exportMonthCheckboxes" class="checkbox-container"></div>
                 
                 <div class="flex-column" style="gap: 12px;">
-                    <button class="btn btn-primary" onclick="shareSummary()">Share Detailed Text via App</button>
+                    <button class="btn btn-primary" onclick="shareSummary()">Share Text Summary via App</button>
                     <div class="flex-row" style="gap: 12px;">
                         <button class="btn btn-success" onclick="downloadExcel()">Download Excel</button>
-                        <button class="btn btn-purple" onclick="generateImageReport()">Download Report Image</button>
+                        <button class="btn btn-purple" onclick="generatePersonalImageReport()">Download Image</button>
                     </div>
                 </div>
             </div>
@@ -140,7 +139,7 @@
             <h1>Settings</h1>
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="openExpenseTracker()">Back to Expense Tracker</button>
-                <button class="btn btn-secondary" onclick="openSplitExpense()">Go to Split Expense</button>
+                <button class="btn btn-secondary" onclick="openSplitExpense()">Go to Group Split</button>
                 <button class="btn btn-danger" onclick="logout()">Secure Logout</button>
             </div>
         </div>
@@ -149,66 +148,69 @@
 
     <div class="container hidden" id="splitExpenseApp">
         <div style="margin-bottom: 24px;">
-            <button class="btn btn-secondary btn-sm" onclick="backToHome()">← Back to Dashboard</button>
+            <button class="btn btn-secondary btn-sm" onclick="backToHome()">← Back to Workspace</button>
         </div>
 
-        <h1>Split Expense</h1>
-        <p class="subtitle">Equitably divide bills and track group balances</p>
-
-        <div class="card">
-            <h3>Quick Split Calculator</h3>
-            <input type="text" id="splitExpenseName" placeholder="What are you splitting? (e.g., Dinner)">
-            <input type="number" id="splitExpenseAmount" placeholder="Total Amount (₹)" step="0.01">
+        <div id="sgListView">
+            <h1 style="margin-bottom: 8px;">Split Groups</h1>
+            <p class="subtitle">Select a group or create a new one to track bills.</p>
             
-            <div style="margin-top: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Participants</span>
-                <button class="btn btn-outline btn-sm" onclick="addSplitParticipantField()">+ Add Person</button>
-            </div>
-            
-            <div id="splitParticipantsList" style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" class="split-participant-name" placeholder="Person 1 (e.g., You)">
-                <input type="text" class="split-participant-name" placeholder="Person 2">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-top: 24px;">
-                <button class="btn btn-secondary" onclick="resetSplitForm()">Clear</button>
-                <button class="btn btn-primary" onclick="calculateQuickSplit()">Calculate Split</button>
+            <div class="card">
+                <div id="sgGroupCards" style="display:flex; flex-direction:column; gap:12px; margin-bottom: 24px;"></div>
+                
+                <h3 style="border-top: 1px solid var(--border-color); padding-top: 20px;">Create New Group</h3>
+                <input type="text" id="sgNewGroupName" placeholder="Group Name (e.g., Goa Trip)">
+                <input type="text" id="sgNewGroupMembers" placeholder="Members (comma separated, e.g., Me, John, Sarah)">
+                <button class="btn btn-primary" onclick="sgCreateGroup()">Create Group</button>
             </div>
         </div>
 
-        <div class="card hidden" id="splitResultCard">
-            <div id="splitReceipt" style="padding: 24px; background: #ffffff; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
-                <button class="btn btn-primary" onclick="shareQuickSplitText()">Share Details</button>
-                <button class="btn btn-purple" onclick="downloadElementAsImage('splitReceipt', 'Split_Receipt')">Save Receipt Image</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Group Balances</h3>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Track ongoing shared expenses.</p>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <select id="splitGroupSelect" onchange="loadGroupExpenses(this.value)"></select>
-                <input type="text" id="newSplitGroupName" placeholder="New group name">
-            </div>
-            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                <button class="btn btn-outline btn-sm" onclick="createSplitGroup()">Create Group</button>
+        <div id="sgDetailView" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1 id="sgGroupTitle" style="margin:0; font-size: 26px;">Group Name</h1>
+                <button class="btn btn-secondary btn-sm" onclick="sgCloseGroup()">Close</button>
             </div>
 
-            <div id="groupActionArea" class="hidden" style="background: #f9f9fb; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
-                <h4 style="margin-top: 0; margin-bottom: 12px; color: var(--text-primary);">Add to Ledger</h4>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Attach the current Quick Split calculation directly to the selected group.</p>
-                <button class="btn btn-success btn-sm" onclick="addCurrentSplitToGroup()">+ Add Split to Active Group</button>
+            <div class="card">
+                <h3>Balances & Settlements</h3>
+                <div id="sgBalancesList"></div>
             </div>
 
-            <div id="splitGroupExpensesList" style="min-height: 60px; margin-top: 12px;">No group selected or no split expenses yet.</div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
-                <button class="btn btn-secondary" onclick="loadGroupExpenses(document.getElementById('splitGroupSelect').value)">Refresh Ledger</button>
-                <button class="btn btn-purple" onclick="generateGroupImageReport()">Download Group Ledger</button>
+            <div class="card">
+                <h3>Add Expense</h3>
+                <input type="text" id="sgExpName" placeholder="What was this for? (e.g., Dinner)">
+                
+                <div style="background: #f9f9fb; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 8px; font-weight: 600; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                        <div>Participant</div>
+                        <div style="text-align: right;">Paid (₹)</div>
+                        <div style="text-align: right;">Share (₹)</div>
+                    </div>
+                    <div id="sgExpMembersList"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                        <div style="font-weight: 600; font-size: 15px;">Total: <span id="sgExpTotal" style="color: var(--accent-blue); font-weight: 700;">₹0</span></div>
+                        <button class="btn btn-secondary btn-sm" onclick="sgSplitEqually()">Split Equally</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="sgSaveExpense()">Save Expense</button>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                    <h3 style="border: none; margin: 0; padding: 0;">Ledger History</h3>
+                    <button class="btn btn-purple btn-sm" onclick="sgDownloadLedgerImage()">Export Image</button>
+                </div>
+                <div id="sgLedgerList"></div>
+            </div>
+
+            <div class="card">
+                <h3>Group Settings</h3>
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <input type="text" id="sgNewMemberName" placeholder="New member name" style="margin: 0;">
+                    <button class="btn btn-secondary" style="width: auto;" onclick="sgAddMember()">Add</button>
+                </div>
+                <button class="btn btn-outline" style="color: var(--red); border-color: var(--red);" onclick="sgDeleteGroup()">Delete Group Permanently</button>
             </div>
         </div>
     </div>

@@ -99,7 +99,6 @@ function resetPin() {
 window.handleLogin = handleLogin; window.resetPin = resetPin; window.updateLoginHints = updateLoginHints;
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => { window.updateLoginHints(); }); } else { window.updateLoginHints(); }
 
-// Navigation
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
@@ -114,7 +113,7 @@ function openSplitExpense() {
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.add('hidden');
     document.getElementById('splitExpenseApp').classList.remove('hidden');
-    resetSplitForm(); loadSplitGroups();
+    sgLoadGroups();
 }
 function backToHome() {
     document.getElementById('homeScreen').classList.remove('hidden');
@@ -142,7 +141,7 @@ function switchTab(tab) {
     else if (tab === 'menu') { document.getElementById('tabMenu').classList.remove('hidden'); document.getElementById('navMenu').classList.add('active'); }
 }
 
-// --- ACTIVE TRANSACTION METRICS ---
+// --- PERSONAL EXPENSE TRACKER ---
 let editingExpenseId = null;
 
 function loadData() {
@@ -259,11 +258,10 @@ function updateChart(data, totalExpenses, balance) {
     });
 }
 
-// --- LEDGER STATEMENTS & EXPORT LOGIC ---
+// Personal Reports
 function loadStatements() {
     const container = document.getElementById('statementsList');
     const checkboxContainer = document.getElementById('exportMonthCheckboxes');
-    
     container.innerHTML = ''; checkboxContainer.innerHTML = '';
 
     const months = Object.keys(localStorage).filter(key => key.match(/^\d{4}-\d{2}$/)).sort((a, b) => b.localeCompare(a));
@@ -304,9 +302,7 @@ function loadStatements() {
     });
 }
 
-function getSelectedMonths() {
-    return Array.from(document.querySelectorAll('.export-cb:checked')).map(cb => cb.value);
-}
+function getSelectedMonths() { return Array.from(document.querySelectorAll('.export-cb:checked')).map(cb => cb.value); }
 
 function downloadExcel() {
     const selectedMonths = getSelectedMonths();
@@ -353,35 +349,28 @@ async function shareSummary() {
             summary += `[${monthName}]\n------------------------------\nIncome: ${formatMoney(data.income)}\nSpent: ${formatMoney(spent)}\nSaved: ${formatMoney(saved)}\n`;
             if (data.expenses.length > 0) {
                 summary += `\nTop Transactions:\n`;
-                [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`; });
-            } else { summary += `No transactions logged.\n`; }
+                [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)})\n`; });
+            }
             summary += `------------------------------\n\n`;
             grandIncome += data.income; grandSpent += spent;
         }
     });
 
-    if (selectedMonths.length > 1) {
-        summary += `🌎 === GRAND TOTAL ===\nTotal Income: ${formatMoney(grandIncome)}\nTotal Spent: ${formatMoney(grandSpent)}\nTotal Saved: ${formatMoney(grandIncome - grandSpent)}\n`;
-    }
-
     if (navigator.share) {
-        try { await navigator.share({ title: 'Consolidated Expense Report', text: summary }); } 
-        catch (err) { console.log('Share canceled', err); }
+        try { await navigator.share({ title: 'Consolidated Expense Report', text: summary }); } catch (err) {}
     } else { navigator.clipboard.writeText(summary); alert("Copied to clipboard!"); }
 }
 
-// Generate Image Report using html2canvas
-function generateImageReport() {
+function generatePersonalImageReport() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select months for the report.");
 
     const reportContainer = document.createElement('div');
-    reportContainer.id = 'tempImageReport';
     Object.assign(reportContainer.style, { position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', backgroundColor: '#f2f2f7', padding: '40px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
 
     let html = `
-        <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-            <h1 style="margin:0 0 10px 0; color: #1c1c1e;">Consolidated Ledger Report</h1>
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; text-align: center;">
+            <h1 style="margin:0 0 10px 0; color: #1c1c1e;">Personal Ledger Report</h1>
             <p style="margin:0; color: #8e8e93;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>
         </div>
     `;
@@ -394,7 +383,7 @@ function generateImageReport() {
             const monthName = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
 
             html += `
-                <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
                     <h2 style="margin: 0 0 20px 0; color: var(--accent-blue); border-bottom: 2px solid #e5e5ea; padding-bottom: 10px;">${monthName}</h2>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
@@ -410,12 +399,10 @@ function generateImageReport() {
                             <p style="margin:0; font-size:20px; font-weight:bold; color:${saved >= 0 ? 'var(--green)' : 'var(--red)'};">${formatMoney(saved)}</p>
                         </div>
                     </div>
-                    <div style="height: 250px; margin-bottom: 20px;"><canvas id="imgChart_${month}"></canvas></div>
                     <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <thead><tr style="background: #f2f2f7;"><th style="text-align: left; padding: 10px; border-radius: 8px 0 0 8px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px; border-radius: 0 8px 8px 0;">Amount</th></tr></thead>
+                        <thead><tr style="background: #f2f2f7;"><th style="text-align: left; padding: 10px; border-radius: 8px 0 0 8px;">Item</th><th style="text-align: right; padding: 10px; border-radius: 0 8px 8px 0;">Amount</th></tr></thead>
                         <tbody>
-                            ${data.expenses.length === 0 ? `<tr><td colspan="3" style="text-align:center; padding:15px; color:#8e8e93;">No transactions</td></tr>` : ''}
-                            ${data.expenses.map(e => `<tr style="border-bottom: 1px solid #f2f2f7;"><td style="padding:10px;">${e.name}</td><td style="padding:10px; color:#8e8e93;">${e.category}</td><td style="text-align:right; padding:10px; font-weight:600; color:var(--red);">-${formatMoney(e.amount)}</td></tr>`).join('')}
+                            ${data.expenses.map(e => `<tr style="border-bottom: 1px solid #f2f2f7;"><td style="padding:10px;">${e.name}</td><td style="text-align:right; padding:10px; font-weight:600; color:var(--red);">-${formatMoney(e.amount)}</td></tr>`).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -426,19 +413,6 @@ function generateImageReport() {
     reportContainer.innerHTML = html;
     document.body.appendChild(reportContainer);
 
-    selectedMonths.forEach(month => {
-        const data = JSON.parse(localStorage.getItem(month));
-        if(data) {
-            const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-            const saved = Math.max(0, data.income - spent);
-            new Chart(document.getElementById(`imgChart_${month}`).getContext('2d'), {
-                type: 'doughnut',
-                data: { labels: ['Spent', 'Remaining'], datasets: [{ data: [spent, saved], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true } } } }
-            });
-        }
-    });
-
     setTimeout(() => {
         html2canvas(reportContainer, { scale: 2, useCORS: true, backgroundColor: '#f2f2f7' }).then(canvas => {
             const link = document.createElement('a');
@@ -446,316 +420,363 @@ function generateImageReport() {
             link.href = canvas.toDataURL('image/png');
             link.click();
             document.body.removeChild(reportContainer);
-        }).catch(e => { console.error(e); alert("Image generation failed."); document.body.removeChild(reportContainer); });
+        });
     }, 500);
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
 
-// --- UNIVERSAL IMAGE DOWNLOAD HELPER ---
-function downloadElementAsImage(elementId, filename) {
-    const element = document.getElementById(elementId);
-    if(!element) return;
-    html2canvas(element, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `${filename}_${new Date().toISOString().slice(0,10)}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    }).catch(err => { console.error(err); alert('Failed to generate image.'); });
-}
+// ==========================================
+// --- NEW PROFESSIONAL SPLIT GROUP LOGIC ---
+// ==========================================
 
-// --- SPLIT EXPENSE APP FEATURE ---
-window.currentSplitState = null;
+let currentSplitGroupId = null;
 
-function addSplitParticipantField() {
-    const container = document.getElementById('splitParticipantsList');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'split-participant-name';
-    input.placeholder = `Person ${container.children.length + 1}`;
-    container.appendChild(input);
-}
+// Initialization and Data Retrieval
+function sgGetGroups() { return JSON.parse(localStorage.getItem('split_groups_pro')) || []; }
+function sgSaveGroups(groups) { localStorage.setItem('split_groups_pro', JSON.stringify(groups)); }
+function sgGetExpenses(groupId) { return JSON.parse(localStorage.getItem(`split_exps_${groupId}`)) || []; }
+function sgSaveExpenses(groupId, exps) { localStorage.setItem(`split_exps_${groupId}`, JSON.stringify(exps)); }
 
-function resetSplitForm() {
-    document.getElementById('splitExpenseName').value = '';
-    document.getElementById('splitExpenseAmount').value = '';
-    const container = document.getElementById('splitParticipantsList');
-    container.innerHTML = '<input type="text" class="split-participant-name" placeholder="Person 1 (e.g., You)"><input type="text" class="split-participant-name" placeholder="Person 2">';
-    document.getElementById('splitResultCard').classList.add('hidden');
-    document.getElementById('groupActionArea').classList.add('hidden');
-    window.currentSplitState = null;
-}
-
-function calculateQuickSplit() {
-    const name = document.getElementById('splitExpenseName').value.trim();
-    const total = parseFloat(document.getElementById('splitExpenseAmount').value);
-    if (!name || !total || total <= 0) return alert('Please enter expense description and valid amount');
-    
-    const participants = [];
-    document.querySelectorAll('.split-participant-name').forEach(input => {
-        if (input.value.trim()) participants.push(input.value.trim());
-    });
-    
-    if (participants.length < 2) return alert('Please add at least 2 participants');
-    
-    const perPerson = total / participants.length;
-    
-    const receipt = document.getElementById('splitReceipt');
-    receipt.innerHTML = `
-        <div style="text-align: center; border-bottom: 2px dashed #e5e5ea; padding-bottom: 16px; margin-bottom: 16px;">
-            <p style="margin: 0 0 4px 0; color: #8e8e93; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Split Bill Receipt</p>
-            <h2 style="margin: 0 0 8px 0; color: #1c1c1e; font-size: 24px;">${name}</h2>
-            <p style="margin: 0; font-size: 32px; font-weight: bold; color: var(--accent-blue); letter-spacing: -1px;">${formatMoney(total)}</p>
-            <p style="margin: 4px 0 0 0; color: #8e8e93; font-size: 14px;">Split evenly ${participants.length} ways</p>
-        </div>
-        <div style="font-size: 15px;">
-            ${participants.map(p => `
-                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f2f7;">
-                    <span style="font-weight: 500; color: #1c1c1e;">${p}</span>
-                    <span style="font-weight: 600; color: var(--green);">${formatMoney(perPerson)}</span>
-                </div>
-            `).join('')}
-        </div>
-        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #8e8e93;">
-            Generated via Expense Tracker • ${new Date().toLocaleDateString('en-IN')}
-        </div>
-    `;
-
-    document.getElementById('splitResultCard').classList.remove('hidden');
-    document.getElementById('groupActionArea').classList.remove('hidden');
-    window.currentSplitState = { name, total, participants, perPerson };
-}
-
-function shareQuickSplitText() {
-    if(!window.currentSplitState) return;
-    const { name, total, participants, perPerson } = window.currentSplitState;
-    let text = `💰 ${name} - ${formatMoney(total)}\nSplit ${participants.length} ways:\n\n`;
-    participants.forEach(p => text += `${p} owes ${formatMoney(perPerson)}\n`);
-    if (navigator.share) { navigator.share({ title: `Split: ${name}`, text }).catch(err => console.log('Share canceled:', err)); } 
-    else { navigator.clipboard.writeText(text); alert("Copied to clipboard!"); }
-}
-
-function addCurrentSplitToGroup() {
-    const groupId = document.getElementById('splitGroupSelect').value;
-    if (!groupId) return alert('Please create or select a group in the Group Balances section first.');
-    if (!window.currentSplitState) return alert('Calculate a split first.');
-
-    const { name, total, participants, perPerson } = window.currentSplitState;
-    const expense = {
-        id: Date.now().toString(), name: name, total: total,
-        participants: participants.map(p => ({ name: p, share: perPerson, paid: false })),
-        createdAt: new Date().toISOString()
-    };
-
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    list.unshift(expense);
-    localStorage.setItem(key, JSON.stringify(list));
-    loadGroupExpenses(groupId);
-    alert('Split successfully added to the active group ledger!');
-    resetSplitForm();
-}
-
-// --- SPLIT GROUP MANAGEMENT ---
-function loadSplitGroups() {
-    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
-    const sel = document.getElementById('splitGroupSelect');
-    if (!sel) return;
-    sel.innerHTML = '';
-    groups.forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g.id; opt.text = g.name; sel.appendChild(opt);
-    });
-    if (groups.length === 0) {
-        const opt = document.createElement('option'); opt.value = ''; opt.text = 'No groups yet'; sel.appendChild(opt);
-    }
-}
-
-function createSplitGroup() {
-    const name = document.getElementById('newSplitGroupName').value.trim();
-    if (!name) return alert('Enter a group name');
-    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
-    const id = Date.now().toString();
-    groups.push({ id, name, createdAt: new Date().toISOString() });
-    localStorage.setItem('split_groups', JSON.stringify(groups));
-    document.getElementById('newSplitGroupName').value = '';
-    loadSplitGroups();
-    document.getElementById('splitGroupSelect').value = id;
-    loadGroupExpenses(id);
-}
-
-function loadGroupExpenses(groupId) {
-    if (!groupId) return;
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    renderGroupExpenses(groupId, list);
-}
-
-function renderGroupExpenses(groupId, expenses) {
-    const container = document.getElementById('splitGroupExpensesList');
-    if (!container) return;
+function sgLoadGroups() {
+    const groups = sgGetGroups();
+    const container = document.getElementById('sgGroupCards');
     container.innerHTML = '';
-    if (!expenses || expenses.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding: 24px; border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-secondary);">No expenses in this group yet. Use the Quick Split Calculator above to add one.</div>';
+    
+    if (groups.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">No groups yet. Create one below to start splitting bills.</div>';
         return;
     }
 
-    expenses.forEach(exp => {
+    groups.forEach(g => {
+        const exps = sgGetExpenses(g.id);
         const card = document.createElement('div');
-        card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '12px';
-        card.style.padding = '16px';
-        card.style.marginBottom = '12px';
-
-        let participantsHtml = '';
-        exp.participants.forEach((p, idx) => {
-            const paidAmount = p.paidAmount ? parseFloat(p.paidAmount) : 0;
-            participantsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom: 1px solid #f2f2f7; gap:8px;">
-                    <div style="flex:1; font-weight: 500; font-size: 14px;">${p.name}</div>
-                    <div style="width:80px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:6px; border-radius:6px; margin-bottom: 0; font-size: 13px;">
-                    </div>
-                    <div style="width:80px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:6px; border-radius:6px; margin-bottom: 0; font-size: 13px;">
-                    </div>
-                    <div style="width:30px; text-align:center;">
-                        <input type="checkbox" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)" style="width: 18px; height: 18px; accent-color: var(--green);">
-                    </div>
-                </div>
-            `;
-        });
-
+        card.style.cssText = "padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; cursor: pointer; transition: 0.2s;";
+        card.onclick = () => sgOpenGroup(g.id);
+        
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                <div>
-                    <div style="font-weight:700; font-size: 16px; color: var(--text-primary);">${exp.name}</div>
-                    <div style="font-size:13px; color:var(--text-secondary); margin-top: 2px;">Total: ${formatMoney(exp.total)}</div>
-                </div>
-                <div style="display:flex; gap:6px;">
-                    <button class="btn btn-secondary btn-sm" onclick="equalizeShares('${groupId}','${exp.id}')">Equalize</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteGroupExpense('${groupId}','${exp.id}')">Delete</button>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0; border:none; padding:0; color: var(--accent-blue);">${g.name}</h3>
+                <span style="font-size: 12px; color: var(--text-secondary); background: #f2f2f7; padding: 4px 8px; border-radius: 12px;">${g.members.length} members</span>
             </div>
-            <div>
-                <div style="display:flex; gap:8px; font-size:12px; color:var(--text-secondary); margin-bottom:6px; font-weight: 600; text-transform: uppercase;">
-                    <div style="flex:1">Participant</div>
-                    <div style="width:80px; text-align:right;">Owes</div>
-                    <div style="width:80px; text-align:right;">Paid</div>
-                    <div style="width:30px; text-align:center;">Done</div>
-                </div>
-                ${participantsHtml}
-            </div>
+            <p style="margin: 8px 0 0 0; font-size: 13px; color: var(--text-secondary);">${exps.length} transactions recorded</p>
         `;
         container.appendChild(card);
     });
 }
 
-function saveParticipantShare(input) {
-    const groupId = input.dataset.group; const expId = input.dataset.exp; const idx = parseInt(input.dataset.idx, 10);
-    const val = parseFloat(input.value) || 0;
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    const exp = list.find(e => e.id === expId);
-    if (!exp) return;
-    exp.participants[idx].share = val;
-    const paid = parseFloat(exp.participants[idx].paidAmount || 0);
-    if (paid > val) exp.participants[idx].paidAmount = val;
-    localStorage.setItem(key, JSON.stringify(list));
-}
-
-function saveParticipantPaidAmount(input) {
-    const groupId = input.dataset.group; const expId = input.dataset.exp; const idx = parseInt(input.dataset.idx, 10);
-    const val = parseFloat(input.value) || 0;
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    const exp = list.find(e => e.id === expId);
-    if (!exp) return;
-    exp.participants[idx].paidAmount = val;
-    exp.participants[idx].paid = val >= (exp.participants[idx].share || 0);
-    localStorage.setItem(key, JSON.stringify(list));
-}
-
-function equalizeShares(groupId, expId) {
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    const exp = list.find(e=>e.id===expId);
-    if (!exp) return;
-    const cnt = exp.participants.length;
-    const share = parseFloat((exp.total / cnt).toFixed(2));
-    exp.participants.forEach(p => { p.share = share; if (p.paidAmount && p.paidAmount > share) p.paidAmount = share; p.paid = (p.paidAmount && p.paidAmount >= share) || false; });
-    localStorage.setItem(key, JSON.stringify(list));
-    loadGroupExpenses(groupId);
-}
-
-function toggleParticipantPaid(checkbox) {
-    const groupId = checkbox.dataset.group; const expId = checkbox.dataset.exp; const idx = parseInt(checkbox.dataset.idx, 10);
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    const exp = list.find(e=>e.id===expId);
-    if (!exp) return;
-    exp.participants[idx].paid = checkbox.checked;
-    localStorage.setItem(key, JSON.stringify(list));
-}
-
-function deleteGroupExpense(groupId, expId) {
-    if (!confirm('Delete this split expense from the ledger?')) return;
-    const key = `split_group_${groupId}`;
-    let list = JSON.parse(localStorage.getItem(key)) || [];
-    list = list.filter(e => e.id !== expId);
-    localStorage.setItem(key, JSON.stringify(list));
-    loadGroupExpenses(groupId);
-}
-
-// Generate Group Ledger Image Report
-function generateGroupImageReport() {
-    const groupId = document.getElementById('splitGroupSelect').value;
-    if (!groupId) return alert('Select a group first');
+function sgCreateGroup() {
+    const name = document.getElementById('sgNewGroupName').value.trim();
+    const membersRaw = document.getElementById('sgNewGroupMembers').value;
     
-    const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
-    const group = groups.find(g=>g.id===groupId);
-    if (!group) return;
-    const expenses = JSON.parse(localStorage.getItem(`split_group_${groupId}`)) || [];
+    if (!name) return alert("Please enter a group name.");
+    
+    let members = membersRaw.split(',').map(m => m.trim()).filter(m => m);
+    if (members.length < 2) return alert("A group needs at least 2 members.");
+    
+    // Ensure unique names
+    members = [...new Set(members)];
 
-    const map = {};
-    expenses.forEach(exp => {
-        exp.participants.forEach(p => {
-            if (!map[p.name]) map[p.name] = { owed: 0, paid: 0 };
-            const share = parseFloat(p.share) || 0;
-            const paidAmt = p.paidAmount ? parseFloat(p.paidAmount) : (p.paid ? share : 0);
-            map[p.name].owed += share; map[p.name].paid += paidAmt;
-        });
-    });
+    const groups = sgGetGroups();
+    const id = 'sg_' + Date.now();
+    groups.unshift({ id, name, members, createdAt: new Date().toISOString() });
+    sgSaveGroups(groups);
+    
+    document.getElementById('sgNewGroupName').value = '';
+    document.getElementById('sgNewGroupMembers').value = '';
+    
+    sgOpenGroup(id);
+}
 
-    const reportContainer = document.getElementById('hiddenGroupReport');
-    Object.assign(reportContainer.style, { width: '800px', backgroundColor: '#ffffff', padding: '40px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
+function sgOpenGroup(id) {
+    currentSplitGroupId = id;
+    document.getElementById('sgListView').classList.add('hidden');
+    document.getElementById('sgDetailView').classList.remove('hidden');
+    sgRenderGroup();
+}
 
-    let html = `
-        <div style="text-align:center; margin-bottom:30px; border-bottom: 2px solid var(--accent-blue); padding-bottom: 20px;">
-            <h1 style="margin:0; font-size: 36px; color: #1c1c1e; letter-spacing: -1px;">${group.name} Ledger</h1>
-            <p style="color:#8e8e93; margin:8px 0 0 0; font-size: 14px;">As of ${new Date().toLocaleDateString('en-IN')}</p>
-        </div>
-        <h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Participant Balances</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:15px; margin-bottom: 40px;">
-            <thead><tr style="background:#f2f2f7;"><th style="text-align:left; padding:12px; border-radius: 8px 0 0 8px;">Participant</th><th style="text-align:right; padding:12px;">Total Owed</th><th style="text-align:right; padding:12px;">Amount Paid</th><th style="text-align:right; padding:12px; border-radius: 0 8px 8px 0;">Remaining Balance</th></tr></thead>
-            <tbody>
-    `;
-    Object.keys(map).forEach((name, idx) => {
-        const owed = map[name].owed; const paid = map[name].paid; const rem = owed - paid;
-        html += `<tr style="border-bottom:1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #fafafa;' : ''}"><td style="padding:12px; font-weight: 600;">${name}</td><td style="padding:12px; text-align:right;">${formatMoney(owed)}</td><td style="padding:12px; text-align:right;">${formatMoney(paid)}</td><td style="padding:12px; text-align:right; font-weight: 700; color: ${rem > 0 ? 'var(--red)' : 'var(--green)'};">${formatMoney(rem)}</td></tr>`;
-    });
-    html += `</tbody></table><h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Expense History</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">`;
+function sgCloseGroup() {
+    currentSplitGroupId = null;
+    document.getElementById('sgDetailView').classList.add('hidden');
+    document.getElementById('sgListView').classList.remove('hidden');
+    sgLoadGroups();
+}
 
-    expenses.forEach(exp=>{
-        html += `
-            <div style="border:1px solid #e5e5ea; padding:20px; border-radius:12px; background: #fafafa;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px dashed #d1d1d6; padding-bottom: 12px; margin-bottom: 12px;"><div style="font-weight:700; font-size: 18px;">${exp.name}</div><div style="font-weight:700; color:var(--accent-blue); font-size: 18px;">${formatMoney(exp.total)}</div></div>
-                <div>${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0; font-size: 14px;'><div style="color: #1c1c1e; font-weight: 500;">${p.name}${p.paid? ' <span style="color: var(--green); font-size: 12px; margin-left: 4px;">(Settled)</span>':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}</div>
+function sgRenderGroup() {
+    const group = sgGetGroups().find(g => g.id === currentSplitGroupId);
+    if (!group) return sgCloseGroup();
+    
+    document.getElementById('sgGroupTitle').innerText = group.name;
+    
+    // Render Add Expense Form inputs
+    const membersList = document.getElementById('sgExpMembersList');
+    membersList.innerHTML = '';
+    group.members.forEach(m => {
+        membersList.innerHTML += `
+            <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 8px; margin-bottom: 8px; align-items: center;">
+                <div style="font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m}</div>
+                <input type="number" class="sg-input-paid" data-member="${m}" placeholder="0" min="0" step="0.01" oninput="sgUpdateTotal()" style="margin:0; padding: 10px; font-size: 14px; background: white;">
+                <input type="number" class="sg-input-share" data-member="${m}" placeholder="0" min="0" step="0.01" style="margin:0; padding: 10px; font-size: 14px; background: white;">
             </div>
         `;
     });
-    html += '</div>';
+    document.getElementById('sgExpTotal').innerText = '₹0';
+    document.getElementById('sgExpName').value = '';
+
+    // Calculate Data
+    const exps = sgGetExpenses(currentSplitGroupId);
+    
+    // Compute Net Balances (Paid - Share = Balance. Positive = Owed money. Negative = Owes money)
+    let balances = {};
+    group.members.forEach(m => balances[m] = 0);
+    
+    exps.forEach(exp => {
+        for (let m in exp.details) {
+            if (balances[m] !== undefined) {
+                balances[m] += (exp.details[m].paid || 0) - (exp.details[m].share || 0);
+            }
+        }
+    });
+
+    // Render Settlements Algorithm
+    let debtors = [];
+    let creditors = [];
+    for (let [name, bal] of Object.entries(balances)) {
+        if (bal < -0.01) debtors.push({ name, amount: Math.abs(bal) });
+        else if (bal > 0.01) creditors.push({ name, amount: bal });
+    }
+    
+    // Greedy matching
+    debtors.sort((a,b) => b.amount - a.amount);
+    creditors.sort((a,b) => b.amount - a.amount);
+    
+    let settlements = [];
+    let d = 0, c = 0;
+    while (d < debtors.length && c < creditors.length) {
+        let debtor = debtors[d];
+        let creditor = creditors[c];
+        let amount = Math.min(debtor.amount, creditor.amount);
+        
+        settlements.push({ from: debtor.name, to: creditor.name, amount });
+        
+        debtor.amount -= amount;
+        creditor.amount -= amount;
+        
+        if (debtor.amount < 0.01) d++;
+        if (creditor.amount < 0.01) c++;
+    }
+
+    // Display Balances
+    const balContainer = document.getElementById('sgBalancesList');
+    if (settlements.length === 0) {
+        balContainer.innerHTML = '<div style="text-align: center; color: var(--green); font-weight: 600; padding: 10px;">All settled up! 🎉</div>';
+    } else {
+        let html = '';
+        settlements.forEach(s => {
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="font-size: 15px;"><span style="font-weight: 600; color: var(--red);">${s.from}</span> owes <span style="font-weight: 600; color: var(--green);">${s.to}</span></div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-weight: 700; font-size: 16px;">${formatMoney(s.amount)}</span>
+                        <button class="btn btn-sm btn-success" style="padding: 6px 12px;" onclick="sgSettleUp('${s.from}', '${s.to}', ${s.amount})">Mark Paid ✓</button>
+                    </div>
+                </div>
+            `;
+        });
+        balContainer.innerHTML = html;
+    }
+
+    // Display Ledger
+    const ledgerContainer = document.getElementById('sgLedgerList');
+    if (exps.length === 0) {
+        ledgerContainer.innerHTML = '<div style="text-align:center; color: var(--text-secondary); padding: 10px;">No expenses yet.</div>';
+    } else {
+        let html = '';
+        exps.forEach(exp => {
+            const isSettlement = exp.isSettlement;
+            const icon = isSettlement ? '💸' : '🧾';
+            const color = isSettlement ? 'var(--green)' : 'var(--text-primary)';
+            
+            html += `
+                <div style="padding: 14px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 15px; color: ${color};">${icon} ${exp.name}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">${new Date(exp.date).toLocaleDateString('en-IN')}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: 700; font-size: 15px;">${formatMoney(exp.total)}</span>
+                            <button class="btn btn-sm btn-outline" style="padding: 4px 8px; border-color: var(--red); color: var(--red);" onclick="sgDeleteExpense('${exp.id}')">✖</button>
+                        </div>
+                    </div>
+            `;
+            
+            if (!isSettlement) {
+                html += `<div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">`;
+                let paidStrs = [];
+                for (let m in exp.details) {
+                    if (exp.details[m].paid > 0) paidStrs.push(`${m} paid ${formatMoney(exp.details[m].paid)}`);
+                }
+                html += paidStrs.join(', ') + `</div>`;
+            }
+            html += `</div>`;
+        });
+        ledgerContainer.innerHTML = html;
+    }
+}
+
+function sgUpdateTotal() {
+    let total = 0;
+    document.querySelectorAll('.sg-input-paid').forEach(inp => total += (parseFloat(inp.value) || 0));
+    document.getElementById('sgExpTotal').innerText = formatMoney(total);
+}
+
+function sgSplitEqually() {
+    let total = 0;
+    document.querySelectorAll('.sg-input-paid').forEach(inp => total += (parseFloat(inp.value) || 0));
+    if (total <= 0) return alert("Enter Paid amounts first.");
+    
+    const shares = document.querySelectorAll('.sg-input-share');
+    const perPerson = parseFloat((total / shares.length).toFixed(2));
+    
+    // Distribute evenly, adjust last person for rounding errors
+    let runningTotal = 0;
+    shares.forEach((inp, idx) => {
+        if (idx === shares.length - 1) {
+            inp.value = (total - runningTotal).toFixed(2);
+        } else {
+            inp.value = perPerson;
+            runningTotal += perPerson;
+        }
+    });
+}
+
+function sgSaveExpense() {
+    const name = document.getElementById('sgExpName').value.trim();
+    if (!name) return alert("Enter an expense description.");
+    
+    let totalPaid = 0;
+    let totalShare = 0;
+    const details = {};
+    
+    const group = sgGetGroups().find(g => g.id === currentSplitGroupId);
+    
+    group.members.forEach(m => {
+        const paidInp = document.querySelector(`.sg-input-paid[data-member="${m}"]`);
+        const shareInp = document.querySelector(`.sg-input-share[data-member="${m}"]`);
+        const paid = parseFloat(paidInp.value) || 0;
+        const share = parseFloat(shareInp.value) || 0;
+        
+        totalPaid += paid;
+        totalShare += share;
+        details[m] = { paid, share };
+    });
+
+    if (totalPaid <= 0) return alert("Total paid must be greater than 0.");
+    if (Math.abs(totalPaid - totalShare) > 0.05) return alert(`Check your math! Total Paid (${totalPaid}) must equal Total Split (${totalShare}).`);
+
+    const exps = sgGetExpenses(currentSplitGroupId);
+    exps.unshift({
+        id: 'exp_' + Date.now(),
+        name: name,
+        total: totalPaid,
+        date: new Date().toISOString(),
+        isSettlement: false,
+        details: details
+    });
+    
+    sgSaveExpenses(currentSplitGroupId, exps);
+    sgRenderGroup();
+}
+
+function sgSettleUp(from, to, amount) {
+    const exps = sgGetExpenses(currentSplitGroupId);
+    const details = {};
+    const group = sgGetGroups().find(g => g.id === currentSplitGroupId);
+    
+    // The person paying (from) fronts the cash. The person receiving (to) consumes it.
+    group.members.forEach(m => {
+        details[m] = { paid: 0, share: 0 };
+    });
+    details[from].paid = amount;
+    details[to].share = amount;
+
+    exps.unshift({
+        id: 'set_' + Date.now(),
+        name: `Settlement: ${from} paid ${to}`,
+        total: amount,
+        date: new Date().toISOString(),
+        isSettlement: true,
+        details: details
+    });
+    
+    sgSaveExpenses(currentSplitGroupId, exps);
+    sgRenderGroup();
+}
+
+function sgDeleteExpense(expId) {
+    if (!confirm("Delete this record from the ledger?")) return;
+    let exps = sgGetExpenses(currentSplitGroupId);
+    exps = exps.filter(e => e.id !== expId);
+    sgSaveExpenses(currentSplitGroupId, exps);
+    sgRenderGroup();
+}
+
+function sgAddMember() {
+    const name = document.getElementById('sgNewMemberName').value.trim();
+    if (!name) return;
+    
+    let groups = sgGetGroups();
+    const groupIndex = groups.findIndex(g => g.id === currentSplitGroupId);
+    if (groups[groupIndex].members.includes(name)) return alert("Member already exists.");
+    
+    groups[groupIndex].members.push(name);
+    sgSaveGroups(groups);
+    document.getElementById('sgNewMemberName').value = '';
+    sgRenderGroup();
+}
+
+function sgDeleteGroup() {
+    if (!confirm("Are you sure you want to completely delete this group and all its history?")) return;
+    let groups = sgGetGroups();
+    groups = groups.filter(g => g.id !== currentSplitGroupId);
+    sgSaveGroups(groups);
+    localStorage.removeItem(`split_exps_${currentSplitGroupId}`);
+    sgCloseGroup();
+}
+
+// Download Group Ledger Image
+function sgDownloadLedgerImage() {
+    const group = sgGetGroups().find(g => g.id === currentSplitGroupId);
+    const exps = sgGetExpenses(currentSplitGroupId);
+    if (exps.length === 0) return alert("No expenses to export.");
+
+    const reportContainer = document.createElement('div');
+    Object.assign(reportContainer.style, { position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', backgroundColor: '#ffffff', padding: '40px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
+
+    let html = `
+        <div style="text-align:center; margin-bottom:30px; border-bottom: 2px solid var(--accent-blue); padding-bottom: 20px;">
+            <h1 style="margin:0; font-size: 36px; color: #1c1c1e;">${group.name} — Full Ledger</h1>
+            <p style="color:#8e8e93; margin:8px 0 0 0; font-size: 14px;">As of ${new Date().toLocaleDateString('en-IN')}</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom: 30px;">
+            <thead><tr style="background:#f2f2f7;"><th style="text-align:left; padding:12px;">Date</th><th style="text-align:left; padding:12px;">Expense</th><th style="text-align:right; padding:12px;">Total</th></tr></thead>
+            <tbody>
+    `;
+    
+    exps.forEach((exp, idx) => {
+        html += `
+            <tr style="border-bottom:1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #fafafa;' : ''}">
+                <td style="padding:12px;">${new Date(exp.date).toLocaleDateString('en-IN')}</td>
+                <td style="padding:12px; font-weight: 500;">${exp.name}</td>
+                <td style="padding:12px; text-align:right; font-weight:600; color: ${exp.isSettlement ? 'var(--green)' : 'var(--text-primary)'};">${formatMoney(exp.total)}</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
     reportContainer.innerHTML = html;
+    document.body.appendChild(reportContainer);
 
     setTimeout(() => {
         html2canvas(reportContainer, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
@@ -763,7 +784,7 @@ function generateGroupImageReport() {
             link.download = `${group.name.replace(/\s+/g,'_')}_Ledger.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
-            reportContainer.innerHTML = '';
+            document.body.removeChild(reportContainer);
         });
-    }, 100);
+    }, 500);
 }
