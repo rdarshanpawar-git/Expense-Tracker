@@ -5,9 +5,7 @@ self.addEventListener('install', (e) => {
         './index.html',
         './app.js',
         './style.css',
-        './manifest.json',
-        './icon-192.png',
-        './icon-512.png'
+        './rupee-icon.svg'
       ]))
     );
   });
