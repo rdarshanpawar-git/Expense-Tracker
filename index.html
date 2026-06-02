@@ -24,26 +24,16 @@
 </head>
 <body>
 
-    <div id="updateNotification" class="update-banner hidden">
-        <div class="update-banner-content">
-            <span>✨ A new version is available!</span>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="dismissUpdate()" class="update-btn-dismiss">Dismiss</button>
-                <button onclick="acceptUpdate()" class="update-btn-accept">Update Now</button>
-            </div>
-        </div>
-    </div>
-
     <div id="loginScreen" class="overlay">
         <div class="login-card">
             <h2 id="loginTitle">Welcome Back</h2>
             <p class="subtitle" id="loginSubtitle">Enter your 4-digit PIN</p>
             <input type="password" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
-            <button onclick="handleLogin()">Unlock</button>
+            <button class="btn btn-primary" onclick="handleLogin()">Unlock</button>
             <p id="loginError" class="error-text hidden">Incorrect PIN</p>
-                <div style="display:flex; gap:8px; margin-top:12px;">
-                    <button onclick="resetPin()" style="background:#ff3b30; width:auto; padding:8px 12px;">Reset PIN</button>
-                </div>
+            <div style="margin-top:16px;">
+                <button class="btn btn-secondary btn-sm" onclick="resetPin()">Reset PIN</button>
+            </div>
         </div>
     </div>
 
@@ -63,7 +53,7 @@
                 <p>Split and share expenses with friends</p>
             </div>
 
-            <button style="margin-top: 30px; width: 100%;" onclick="logout()">Logout</button>
+            <button class="btn btn-secondary" style="margin-top: 30px;" onclick="logout()">Logout</button>
         </div>
     </div>
 
@@ -93,7 +83,7 @@
             <div class="card">
                 <h3>Monthly Budget</h3>
                 <input type="number" id="incomeInput" placeholder="Enter Total Income (₹)">
-                <button onclick="setIncome()">Update Income</button>
+                <button class="btn btn-primary" onclick="setIncome()">Update Income</button>
             </div>
 
             <div class="card">
@@ -104,22 +94,22 @@
                 <input type="text" id="expenseCategory" list="categoryOptions" placeholder="Category (Select or Type Custom)">
                 <datalist id="categoryOptions"></datalist>
 
-                <div style="margin-top: 12px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="splitToggle" onchange="toggleSplitMode()">
+                <div style="margin-top: 12px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="splitToggle" onchange="toggleSplitMode()" style="width: 20px; height: 20px; accent-color: var(--accent-blue);">
                         <span>Split this expense?</span>
                     </label>
                 </div>
 
-                <div id="splitSection" style="display: none; margin-top: 12px; padding: 12px; background: #f9f9fb; border-radius: 10px;">
+                <div id="splitSection" style="display: none; margin-bottom: 16px; padding: 16px; background: #f9f9fb; border-radius: 12px; border: 1px solid var(--border-color);">
                     <div style="margin-bottom: 12px;">
-                        <label style="font-size: 12px; color: #666;">Number of people:</label>
-                        <input type="number" id="splitCount" placeholder="2" value="2" min="2" max="10" onchange="updateSplitFields()" style="margin-top: 4px;">
+                        <label style="font-size: 13px; color: #666; font-weight: 500;">Number of people:</label>
+                        <input type="number" id="splitCount" placeholder="2" value="2" min="2" max="10" onchange="updateSplitFields()" style="margin-top: 6px;">
                     </div>
                     <div id="splitParticipants"></div>
                 </div>
 
-                <button id="addBtn" onclick="addExpense()">Add Transaction</button>
+                <button class="btn btn-primary" id="addBtn" onclick="addExpense()">Add Transaction</button>
             </div>
 
             <div class="card">
@@ -133,16 +123,16 @@
             <div class="subtitle">Your previous monthly records</div>
 
             <div class="card">
-                <h3>Reports & Statements</h3>
-                <p class="subtitle" style="margin-bottom: 10px;">Select months for a consolidated report:</p>
+                <h3>Reports & Exports</h3>
+                <p class="subtitle" style="margin-bottom: 12px;">Select months to consolidate:</p>
                 
                 <div id="exportMonthCheckboxes" class="checkbox-container"></div>
                 
-                <div class="flex-column" style="gap: 10px;">
-                    <button onclick="shareSummary()">Share Detailed Text via App</button>
-                    <div class="flex-row" style="gap: 10px;">
-                        <button onclick="downloadExcel()" class="btn-green">Download Excel</button>
-                        <button onclick="generatePrintReport()" style="background-color: #5856d6;">Download as PDF (via Print)</button>
+                <div class="flex-column" style="gap: 12px;">
+                    <button class="btn btn-primary" onclick="shareSummary()">Share Detailed Text via App</button>
+                    <div class="flex-row" style="gap: 12px;">
+                        <button class="btn btn-success" onclick="downloadExcel()">Download Excel</button>
+                        <button class="btn btn-purple" onclick="generatePrintReport()">Download PDF</button>
                     </div>
                 </div>
             </div>
@@ -151,21 +141,23 @@
         </div>
 
         <div id="tabMenu" class="hidden">
-            <h1>Menu</h1>
-            <button onclick="openExpenseTracker()" style="margin-bottom: 10px;">Back to Expense Tracker</button>
-            <button onclick="openSplitExpense()" style="margin-bottom: 10px;">Go to Split Expense</button>
-            <button onclick="logout()" style="background-color: #ff3b30;">Logout</button>
+            <h1>Settings</h1>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="openExpenseTracker()">Back to Expense Tracker</button>
+                <button class="btn btn-secondary" onclick="openSplitExpense()">Go to Split Expense</button>
+                <button class="btn btn-danger" onclick="logout()">Secure Logout</button>
+            </div>
         </div>
 
     </div>
 
     <div class="container hidden" id="splitExpenseApp">
-        <div style="margin-bottom: 20px;">
-            <button onclick="backToHome()" style="background-color: #666;">← Back</button>
+        <div style="margin-bottom: 24px;">
+            <button class="btn btn-secondary btn-sm" onclick="backToHome()">← Back to Dashboard</button>
         </div>
 
         <h1>Split Expense</h1>
-        <p class="subtitle">Add participants and split the expense</p>
+        <p class="subtitle">Add participants and calculate shares</p>
 
         <div class="card">
             <h3>Expense Details</h3>
@@ -181,55 +173,57 @@
 
         <div class="card">
             <h3>Split Summary</h3>
-            <div style="padding: 15px; background: #f9f9fb; border-radius: 10px;">
-                <p style="margin: 0; color: #666;">Amount per person:</p>
-                <p id="splitAmountPerPerson" style="margin: 5px 0; font-size: 20px; font-weight: bold; color: #36a2eb;">₹0</p>
+            <div style="padding: 20px; background: #f9f9fb; border-radius: 12px; text-align: center; border: 1px solid var(--border-color);">
+                <p style="margin: 0; color: #666; font-size: 14px; font-weight: 500;">Amount per person</p>
+                <p id="splitAmountPerPerson" style="margin: 8px 0 0 0; font-size: 28px; font-weight: 700; color: var(--accent-blue);">₹0</p>
             </div>
         </div>
 
         <div class="card">
-            <h3>Split Group Manager</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <select id="splitGroupSelect" onchange="loadGroupExpenses(this.value)" style="padding: 12px; border-radius: 8px;"></select>
-                <input id="newSplitGroupName" placeholder="New group name" style="padding: 12px; border-radius: 8px;">
+            <h3>Group Manager</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <select id="splitGroupSelect" onchange="loadGroupExpenses(this.value)"></select>
+                <input type="text" id="newSplitGroupName" placeholder="New group name">
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 12px;">
-                <button onclick="createSplitGroup()">Create Group</button>
-                <button onclick="addSplitToGroup()" style="background-color: #34c759;">Add This Split to Group</button>
-                <button onclick="runPdfSmokeCheck()" style="background-color:#ff9500;">Run PDF Smoke Test</button>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="createSplitGroup()">Create Group</button>
+                <button class="btn btn-success" onclick="addSplitToGroup()">Add to Group</button>
             </div>
         </div>
 
         <div class="card">
-            <h3>Group Split Expenses</h3>
+            <h3>Group Ledger</h3>
             <div id="splitGroupExpensesList" style="min-height: 60px;">No group selected or no split expenses yet.</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
-                <button onclick="loadGroupExpenses(document.getElementById('splitGroupSelect').value)">Refresh List</button>
-                <button onclick="generateSelectedGroupReport()" style="background-color: #5856d6;">Generate Group Report (PDF)</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                <button class="btn btn-secondary" onclick="loadGroupExpenses(document.getElementById('splitGroupSelect').value)">Refresh List</button>
+                <button class="btn btn-purple" onclick="generateSelectedGroupReport()">Generate PDF Report</button>
             </div>
         </div>
 
         <div class="card">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button onclick="resetSplitForm()" style="background-color: #999;">Reset</button>
-                <button onclick="generateSplitSummary()" style="background-color: #34c759;">Generate & Share</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <button class="btn btn-outline" onclick="resetSplitForm()">Reset Fields</button>
+                <button class="btn btn-primary" onclick="generateSplitSummary()">Calculate & Share</button>
             </div>
         </div>
 
         <div id="splitSummaryOutput" class="card hidden">
-            <h3>Share This Summary</h3>
-            <div id="splitSummaryText" style="padding: 15px; background: #f9f9fb; border-radius: 10px; margin-bottom: 15px; white-space: pre-wrap; font-family: monospace; font-size: 12px;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button onclick="copySplitSummary()">Copy to Clipboard</button>
-                <button onclick="shareSplitSummary()" style="background-color: #007aff;">Share via Message</button>
+            <h3>Share Summary</h3>
+            <div id="splitSummaryText" style="padding: 16px; background: #f9f9fb; border-radius: 12px; margin-bottom: 16px; white-space: pre-wrap; font-family: monospace; font-size: 13px; border: 1px solid var(--border-color);"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <button class="btn btn-secondary" onclick="copySplitSummary()">Copy Text</button>
+                <button class="btn btn-primary" onclick="shareSplitSummary()">Share via App</button>
             </div>
-            <button onclick="exportSplitPDF()" style="background-color: #5856d6; margin-top: 10px;">Export as PDF</button>
+            <button class="btn btn-purple" onclick="exportSplitPDF()">Export Receipt (PDF)</button>
         </div>
     </div>
 
     <script src="app.js"></script>
     <script>
-        registerServiceWorker();
+        // Check if service worker is defined in app.js
+        if (typeof registerServiceWorker === 'function') {
+            registerServiceWorker();
+        }
     </script>
 </body>
 </html>

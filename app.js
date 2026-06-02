@@ -16,13 +16,9 @@ function registerServiceWorker() {
     }
 
     navigator.serviceWorker.register('sw.js').then(registration => {
-        setInterval(() => {
-            registration.update();
-        }, 30 * 60 * 1000);
-
+        setInterval(() => { registration.update(); }, 30 * 60 * 1000);
         registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'waiting' && navigator.serviceWorker.controller) {
                     newServiceWorkerReady = newWorker;
@@ -30,10 +26,7 @@ function registerServiceWorker() {
                 }
             });
         });
-
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-        });
+        navigator.serviceWorker.addEventListener('controllerchange', () => { window.location.reload(); });
     }).catch(err => console.error('Service Worker registration failed:', err));
 }
 
@@ -48,9 +41,7 @@ function dismissUpdate() {
 }
 
 function acceptUpdate() {
-    if (newServiceWorkerReady) {
-        newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
-    }
+    if (newServiceWorkerReady) newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
 }
 
 // --- DYNAMIC CATEGORY MANAGER ---
@@ -84,9 +75,7 @@ function updateLoginHints() {
             if (titleEl) titleEl.innerText = "Welcome Back";
             if (subtitleEl) subtitleEl.innerText = "Enter your 4-digit PIN";
         }
-    } catch (e) {
-        console.warn('updateLoginHints error:', e);
-    }
+    } catch (e) { console.warn('updateLoginHints error:', e); }
 }
 
 function handleLogin() {
@@ -132,9 +121,7 @@ window.updateLoginHints = updateLoginHints;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { window.updateLoginHints(); });
-} else {
-    window.updateLoginHints();
-}
+} else { window.updateLoginHints(); }
 
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
@@ -217,8 +204,8 @@ function updateSplitFields() {
         const div = document.createElement('div');
         div.style.marginBottom = '10px';
         div.innerHTML = `
-            <label style="font-size: 12px; color: #666;">Person ${i + 1}:</label>
-            <input type="text" class="split-name" placeholder="Name" style="width: 100%; margin-top: 4px;">
+            <label style="font-size: 13px; color: #666; font-weight: 500;">Person ${i + 1}:</label>
+            <input type="text" class="split-name" placeholder="Name" style="width: 100%; margin-top: 6px;">
         `;
         container.appendChild(div);
     }
@@ -271,11 +258,7 @@ function addExpense() {
         if (participants.length < 2) return alert("Enter at least 2 participants for split expense.");
         
         const sharePerPerson = amount / participants.length;
-        splitData = {
-            isplit: true,
-            participants: participants,
-            sharePerPerson: parseFloat(sharePerPerson.toFixed(2))
-        };
+        splitData = { isplit: true, participants: participants, sharePerPerson: parseFloat(sharePerPerson.toFixed(2)) };
     }
 
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
@@ -337,7 +320,7 @@ function renderExpenseList(expenses) {
     const listContainer = document.getElementById('expenseList');
     listContainer.innerHTML = ''; 
     if (expenses.length === 0) {
-        listContainer.innerHTML = '<p style="color: #8e8e93; text-align: center; padding: 10px;">No recorded charges.</p>';
+        listContainer.innerHTML = '<p style="color: #8e8e93; text-align: center; padding: 16px;">No recorded charges.</p>';
         return;
     }
     expenses.forEach(exp => {
@@ -347,9 +330,9 @@ function renderExpenseList(expenses) {
         let splitInfo = '';
         if (exp.split && exp.split.isplit) {
             splitInfo = `
-                <div style="font-size: 12px; color: #666; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e5ea;">
-                    <strong>Split between:</strong> ${exp.split.participants.join(', ')}<br>
-                    <strong>Each pays:</strong> ${formatMoney(exp.split.sharePerPerson)}
+                <div style="font-size: 12px; color: #666; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e5ea;">
+                    <strong>Split:</strong> ${exp.split.participants.join(', ')}<br>
+                    <span style="color:var(--accent-blue);">Each pays: ${formatMoney(exp.split.sharePerPerson)}</span>
                 </div>
             `;
         }
@@ -361,7 +344,7 @@ function renderExpenseList(expenses) {
                 ${splitInfo}
             </div>
             <div style="display: flex; align-items: center;">
-                <span class="expense-amount" style="margin-right: 10px;">-${formatMoney(exp.amount)}</span>
+                <span class="expense-amount" style="margin-right: 12px;">-${formatMoney(exp.amount)}</span>
                 <div class="action-btns">
                     <button onclick="editExpense(${exp.id})" class="icon-btn edit-btn">✎</button>
                     <button onclick="deleteExpense(${exp.id})" class="icon-btn delete-btn">✖</button>
@@ -421,10 +404,7 @@ function loadStatements() {
 
         const cbRow = document.createElement('div');
         cbRow.className = 'checkbox-row';
-        cbRow.innerHTML = `
-            <input type="checkbox" class="export-cb" value="${month}" id="cb_${month}" checked>
-            <label for="cb_${month}">${monthName}</label>
-        `;
+        cbRow.innerHTML = `<input type="checkbox" class="export-cb" value="${month}" id="cb_${month}" checked><label for="cb_${month}">${monthName}</label>`;
         checkboxContainer.appendChild(cbRow);
 
         const item = document.createElement('div');
@@ -437,17 +417,12 @@ function loadStatements() {
             </div>
             <div style="text-align: right;">
                 <span class="expense-amount" style="color: var(--text-primary); display:block; font-size:14px;">Used: ${formatMoney(totalExpenses)}</span>
-                <span class="statement-amount ${remaining >= 0 ? 'positive' : ''}" style="font-size:12px; font-weight:600;">
+                <span class="statement-amount ${remaining >= 0 ? 'positive' : ''}" style="font-size:13px; font-weight:600;">
                     ${remaining >= 0 ? 'Saved' : 'Overdraft'}: ${formatMoney(Math.abs(remaining))}
                 </span>
             </div>
         `;
-        
-        item.onclick = () => {
-            document.getElementById('monthSelector').value = month;
-            switchTab('home');
-        };
-
+        item.onclick = () => { document.getElementById('monthSelector').value = month; switchTab('home'); };
         container.appendChild(item);
     });
 }
@@ -461,7 +436,6 @@ function getSelectedMonths() {
 function downloadExcel() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to export.");
-
     const workbook = XLSX.utils.book_new();
 
     selectedMonths.forEach(month => {
@@ -473,17 +447,11 @@ function downloadExcel() {
             const tabName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
 
             const worksheetData = [
-                ["Monthly Ledger Report", "", "", ""],
-                ["Month", month, "", ""],
-                ["", "", "", ""],
-                ["Financial Overview", "", "", ""],
-                ["Item", "Amount (INR)", "", ""],
-                ["Monthly Income", data.income, "", ""],
-                ["Total Expenses", totalSpent, "", ""],
-                ["Saved / (Overdraft)", saved, "", ""],
-                ["", "", "", ""],
-                ["Transaction Details", "", "", ""],
-                ["Description", "Category", "Amount (INR)", "Date"]
+                ["Monthly Ledger Report", "", "", ""], ["Month", month, "", ""], ["", "", "", ""],
+                ["Financial Overview", "", "", ""], ["Item", "Amount (INR)", "", ""],
+                ["Monthly Income", data.income, "", ""], ["Total Expenses", totalSpent, "", ""],
+                ["Saved / (Overdraft)", saved, "", ""], ["", "", "", ""],
+                ["Transaction Details", "", "", ""], ["Description", "Category", "Amount (INR)", "Date"]
             ];
 
             data.expenses.forEach(exp => {
@@ -496,7 +464,6 @@ function downloadExcel() {
             XLSX.utils.book_append_sheet(workbook, worksheet, tabName);
         }
     });
-
     XLSX.writeFile(workbook, `Consolidated_Report_${Date.now()}.xlsx`);
 }
 
@@ -505,9 +472,8 @@ async function shareSummary() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to share.");
 
-    let summary = "📊 Detailed Expense Report (Consolidated)\n\n";
-    let grandIncome = 0;
-    let grandSpent = 0;
+    let summary = "📊 Detailed Expense Report\n\n";
+    let grandIncome = 0, grandSpent = 0;
 
     selectedMonths.forEach(month => {
         const data = JSON.parse(localStorage.getItem(month));
@@ -523,12 +489,9 @@ async function shareSummary() {
                 summary += `\nTop Transactions:\n`;
                 const sorted = [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
                 sorted.forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`; });
-            } else {
-                summary += `No transactions logged.\n`;
-            }
+            } else { summary += `No transactions logged.\n`; }
             summary += `------------------------------\n\n`;
-            grandIncome += data.income;
-            grandSpent += spent;
+            grandIncome += data.income; grandSpent += spent;
         }
     });
 
@@ -598,21 +561,14 @@ function generatePrintReport() {
             const ctx = document.getElementById(`printChart_${month}`).getContext('2d');
             new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: ['Spent', 'Remaining'],
-                    datasets: [{ data: [spent, Math.max(0, saved)], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false,
-                    plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
-                }
+                data: { labels: ['Spent', 'Remaining'], datasets: [{ data: [spent, Math.max(0, saved)], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } } }
             });
         }
     });
 
     document.body.offsetHeight; // Force reflow
     window.print();
-    
     app.classList.remove('printing');
     if (printContainer) printContainer.remove();
 }
@@ -624,14 +580,10 @@ function updateSplitParticipantFields() {
     const count = parseInt(document.getElementById('splitParticipantCount').value) || 2;
     const container = document.getElementById('splitParticipantsList');
     container.innerHTML = '';
-    
     for (let i = 0; i < count; i++) {
         const div = document.createElement('div');
-        div.style.marginBottom = '10px';
-        div.innerHTML = `
-            <label style="font-size: 12px; color: #666;">Person ${i + 1}:</label>
-            <input type="text" class="split-participant-name" placeholder="Name (e.g., John)" style="width: 100%; margin-top: 4px;">
-        `;
+        div.style.marginBottom = '12px';
+        div.innerHTML = `<label style="font-size: 13px; color: #666; font-weight: 500;">Person ${i + 1}:</label><input type="text" class="split-participant-name" placeholder="Name (e.g., John)" style="width: 100%; margin-top: 6px;">`;
         container.appendChild(div);
     }
 }
@@ -682,9 +634,7 @@ function shareSplitSummary() {
     
     if (navigator.share) {
         navigator.share({ title: `Split Expense: ${expenseName}`, text: summaryText }).catch(err => console.log('Share canceled:', err));
-    } else {
-        alert('Sharing not supported. Use "Copy to Clipboard" instead.');
-    }
+    } else { alert('Sharing not supported. Use "Copy to Clipboard" instead.'); }
 }
 
 function exportSplitPDF() {
@@ -741,7 +691,6 @@ function exportSplitPDF() {
 
     html2pdf().set(opt).from(pdfContainer).save().then(() => {
         document.body.removeChild(pdfContainer);
-        alert('PDF exported successfully!');
     }).catch(err => {
         console.error('PDF generation failed:', err);
         alert('PDF export failed. Please try again.');
@@ -780,7 +729,6 @@ function createSplitGroup() {
     localStorage.setItem('split_groups', JSON.stringify(groups));
     document.getElementById('newSplitGroupName').value = '';
     loadSplitGroups();
-    alert('Group created');
 }
 
 function addSplitToGroup() {
@@ -809,7 +757,6 @@ function addSplitToGroup() {
     list.unshift(expense);
     localStorage.setItem(key, JSON.stringify(list));
     loadGroupExpenses(groupId);
-    alert('Split expense added to group');
 }
 
 function loadGroupExpenses(groupId) {
@@ -824,50 +771,50 @@ function renderGroupExpenses(groupId, expenses) {
     if (!container) return;
     container.innerHTML = '';
     if (!expenses || expenses.length === 0) {
-        container.innerHTML = '<p style="color:#8e8e93">No split expenses for this group.</p>';
+        container.innerHTML = '<p style="color:#8e8e93; font-size:14px; text-align:center; padding: 12px;">No split expenses for this group.</p>';
         return;
     }
 
     expenses.forEach(exp => {
         const card = document.createElement('div');
         card.className = 'card split-group-expense';
-        card.style.marginBottom = '8px';
+        card.style.marginBottom = '12px';
 
         let participantsHtml = '';
         exp.participants.forEach((p, idx) => {
             const paidAmount = p.paidAmount ? parseFloat(p.paidAmount) : 0;
             participantsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom: 1px solid #eee; gap:12px;">
-                    <div style="flex:1">${idx+1}. ${p.name}</div>
-                    <div style="width:110px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:6px; border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom: 1px solid var(--border-color); gap:12px;">
+                    <div style="flex:1; font-weight: 500; font-size: 14px;">${idx+1}. ${p.name}</div>
+                    <div style="width:100px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:8px; border-radius:8px; margin-bottom: 0;">
                     </div>
-                    <div style="width:110px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:6px; border-radius:6px;">
+                    <div style="width:100px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:8px; border-radius:8px; margin-bottom: 0;">
                     </div>
                     <div style="width:36px; text-align:center;">
-                        <input type=checkbox data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)">
+                        <input type="checkbox" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)" style="width: 20px; height: 20px; accent-color: var(--green);">
                     </div>
                 </div>
             `;
         });
 
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
                 <div>
-                    <div style="font-weight:700;">${exp.name}</div>
-                    <div style="font-size:12px; color:#8e8e93;">Total: ${formatMoney(exp.total)} • ${new Date(exp.createdAt).toLocaleString()}</div>
+                    <div style="font-weight:700; font-size: 16px;">${exp.name}</div>
+                    <div style="font-size:13px; color:var(--text-secondary);">Total: ${formatMoney(exp.total)}</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button onclick="equalizeShares('${groupId}','${exp.id}')">Equalize</button>
-                    <button onclick="deleteGroupExpense('${groupId}','${exp.id}')" style="background:#ff3b30;">Delete</button>
+                    <button class="btn btn-secondary btn-sm" onclick="equalizeShares('${groupId}','${exp.id}')">Equalize</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteGroupExpense('${groupId}','${exp.id}')">Delete</button>
                 </div>
             </div>
-            <div style="margin-top:10px;">
-                <div style="display:flex; gap:12px; font-size:12px; color:#8e8e93; margin-bottom:6px;">
+            <div>
+                <div style="display:flex; gap:12px; font-size:13px; color:var(--text-secondary); margin-bottom:6px; font-weight: 500;">
                     <div style="flex:1">Participant</div>
-                    <div style="width:110px; text-align:right;">Share (₹)</div>
-                    <div style="width:110px; text-align:right;">Paid (₹)</div>
+                    <div style="width:100px; text-align:right;">Share (₹)</div>
+                    <div style="width:100px; text-align:right;">Paid (₹)</div>
                     <div style="width:36px; text-align:center;">Done</div>
                 </div>
                 ${participantsHtml}
@@ -958,29 +905,29 @@ function generateGroupReportPDF(groupId) {
     });
 
     let html = `
-        <div style="padding:30px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto, sans-serif;">
-            <div style="text-align:center; margin-bottom:20px;">
-                <h1 style="margin:0;">${group.name} — Split Report</h1>
-                <p style="color:#8e8e93; margin:6px 0;">Generated: ${new Date().toLocaleString()}</p>
+        <div style="padding:40px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto, sans-serif;">
+            <div style="text-align:center; margin-bottom:30px; border-bottom: 2px solid #007aff; padding-bottom: 20px;">
+                <h1 style="margin:0; font-size: 32px; color: #1c1c1e;">${group.name} — Split Report</h1>
+                <p style="color:#8e8e93; margin:8px 0 0 0; font-size: 14px;">Generated: ${new Date().toLocaleString()}</p>
             </div>
-            <h3 style="margin-top:20px;">Participant Summary</h3>
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead><tr style="background:#f2f2f7;"><th style="text-align:left; padding:10px;">Participant</th><th style="text-align:right; padding:10px;">Owed</th><th style="text-align:right; padding:10px;">Paid</th><th style="text-align:right; padding:10px;">Remaining</th></tr></thead>
+            <h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e;">Participant Summary</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom: 30px;">
+                <thead><tr style="background:#f2f2f7; border-bottom: 2px solid #e5e5ea;"><th style="text-align:left; padding:12px;">Participant</th><th style="text-align:right; padding:12px;">Owed</th><th style="text-align:right; padding:12px;">Paid</th><th style="text-align:right; padding:12px;">Remaining</th></tr></thead>
                 <tbody>
     `;
-    Object.keys(map).forEach(name => {
+    Object.keys(map).forEach((name, idx) => {
         const owed = map[name].owed; const paid = map[name].paid; const rem = owed - paid;
-        html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">${name}</td><td style="padding:10px; text-align:right;">${formatMoney(owed)}</td><td style="padding:10px; text-align:right;">${formatMoney(paid)}</td><td style="padding:10px; text-align:right;">${formatMoney(rem)}</td></tr>`;
+        html += `<tr style="border-bottom:1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}"><td style="padding:12px; font-weight: 500;">${name}</td><td style="padding:12px; text-align:right;">${formatMoney(owed)}</td><td style="padding:12px; text-align:right;">${formatMoney(paid)}</td><td style="padding:12px; text-align:right; font-weight: 600; color: ${rem > 0 ? '#ff3b30' : '#34c759'};">${formatMoney(rem)}</td></tr>`;
     });
 
-    html += `</tbody></table><h3 style="margin-top:20px;">Expenses</h3>`;
+    html += `</tbody></table><h3 style="margin-top:30px; font-size: 20px; color: #1c1c1e;">Detailed Expenses</h3>`;
 
     expenses.forEach(exp=>{
         html += `
-            <div style="border:1px solid #eee; padding:12px; border-radius:8px; margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:700">${exp.name}</div><div style="font-weight:700; color:#ff3b30;">${formatMoney(exp.total)}</div></div>
-                <div style="margin-top:8px;">
-                    ${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0;'><div>${p.name}${p.paid? ' ✓':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}
+            <div style="border:1px solid #e5e5ea; padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px dashed #e5e5ea; padding-bottom: 10px; margin-bottom: 10px;"><div style="font-weight:700; font-size: 16px;">${exp.name}</div><div style="font-weight:700; color:#ff3b30; font-size: 16px;">${formatMoney(exp.total)}</div></div>
+                <div>
+                    ${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0; font-size: 14px;'><div style="color: #666;">${p.name}${p.paid? ' <span style="color: #34c759;">(Paid)</span>':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}
                 </div>
             </div>
         `;
@@ -989,13 +936,13 @@ function generateGroupReportPDF(groupId) {
 
     const container = document.createElement('div');
     container.id = 'groupPdfContent';
-    Object.assign(container.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999' });
+    Object.assign(container.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999', backgroundColor: '#fff' });
     container.innerHTML = html;
     document.body.appendChild(container);
 
     const opt = {
         margin: [10,10,10,10],
-        filename: `${group.name.replace(/\s+/g,'_')}_Split_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+        filename: `${group.name.replace(/\s+/g,'_')}_Report_${new Date().toISOString().slice(0,10)}.pdf`,
         image:{ type:'jpeg', quality:0.98 },
         html2canvas:{ scale:2, useCORS:true },
         jsPDF:{ orientation:'portrait', unit:'mm', format:'a4' }
@@ -1003,58 +950,4 @@ function generateGroupReportPDF(groupId) {
 
     html2pdf().set(opt).from(container).save().then(()=>{ container.remove(); })
     .catch(err=>{ console.error(err); container.remove(); alert('Failed to export group PDF'); });
-}
-
-async function runPdfSmokeCheck() {
-    try {
-        console.log('Running PDF smoke-check...');
-        localStorage.setItem('split_groups', JSON.stringify([{id:'test_g', name:'Smoke Test Group'}]));
-        localStorage.setItem('split_group_test_g', JSON.stringify([
-            { id: 'test_e1', name: 'Dinner', total: 300, participants: [ {name:'Alice', share:100, paidAmount:50, paid:false}, {name:'Bob', share:100, paidAmount:100, paid:true}, {name:'Charlie', share:100, paidAmount:0, paid:false}], createdAt: new Date().toISOString() }
-        ]));
-
-        if (window.loadSplitGroups) loadSplitGroups();
-        if (window.loadGroupExpenses) loadGroupExpenses('test_g');
-
-        const orig = window.html2pdf;
-        
-        // --- THIS IS THE FIXED BRACKET BLOCK ---
-        window.html2pdf = function() {
-            return {
-                set: function() {
-                    return {
-                        from: function() {
-                            return {
-                                save: function() {
-                                    return new Promise(resolve => setTimeout(resolve, 1000));
-                                }
-                            };
-                        }
-                    };
-                }
-            };
-        };
-
-        if (window.generateGroupReportPDF) generateGroupReportPDF('test_g');
-
-        await new Promise((res, rej)=>{
-            let tries = 0;
-            const iv = setInterval(()=>{
-                const c = document.getElementById('groupPdfContent');
-                if (c) { clearInterval(iv); res(c.innerText.slice(0,1000)); }
-                if (++tries > 10) { clearInterval(iv); rej(new Error('Timeout waiting for PDF content')); }
-            }, 300);
-        }).then(preview => {
-            console.log('PDF content preview:\n', preview);
-            let out = document.getElementById('smokeTestResult');
-            if (!out) { out = document.createElement('pre'); out.id = 'smokeTestResult'; out.style.padding='12px'; out.style.background='#fff3'; out.style.margin='12px 0'; document.body.appendChild(out); }
-            out.textContent = 'PDF content preview:\n' + preview;
-        }).catch(err=>{ console.error(err); alert('Smoke-check failed: '+err.message); });
-
-        window.html2pdf = orig;
-        console.log('Smoke-check complete.');
-    } catch (e) {
-        console.error('Smoke-check error', e);
-        alert('Smoke-check error: ' + e.message);
-    }
 }
