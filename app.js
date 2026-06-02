@@ -196,7 +196,7 @@ function updateChart(data, totalExpenses, balance) {
     chartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Total Expenditures', 'Net Leftover'],
+            labels: ['Spent', 'Net Leftover'],
             datasets: [{
                 data: [totalExpenses, chartRemaining],
                 backgroundColor: ['#ff3b30', '#34c759'],
@@ -236,7 +236,7 @@ function loadStatements() {
         const dateObj = new Date(month + '-02'); 
         const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-        // 1. Populate the Export Checkboxes
+        // Populate Export Checkboxes
         const cbRow = document.createElement('div');
         cbRow.className = 'checkbox-row';
         cbRow.innerHTML = `
@@ -245,7 +245,7 @@ function loadStatements() {
         `;
         checkboxContainer.appendChild(cbRow);
 
-        // 2. Populate the History List below it
+        // Populate History List
         const item = document.createElement('div');
         item.className = 'card statement-item';
         item.style.cursor = 'pointer';
@@ -276,41 +276,58 @@ function getSelectedMonths() {
     return Array.from(checkboxes).map(cb => cb.value);
 }
 
-// Export to CSV Spreadsheet
-function downloadCSV() {
+// Export Professional Excel Spreadsheet (Multiple Tabs)
+function downloadExcel() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to export.");
 
-    let csvContent = "Month,Type,Description,Category,Amount (INR)\n";
+    const workbook = XLSX.utils.book_new();
 
     selectedMonths.forEach(month => {
         const data = JSON.parse(localStorage.getItem(month));
         if (data) {
-            csvContent += `"${month}","Income","Total Monthly Budget","Income","${data.income}"\n`;
+            const totalSpent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const saved = data.income - totalSpent;
+            
+            const dateObj = new Date(month + '-02');
+            const tabName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+
+            const worksheetData = [
+                ["Monthly Ledger Report", "", "", ""],
+                ["Month", month, "", ""],
+                ["", "", "", ""],
+                ["Financial Overview", "", "", ""],
+                ["Item", "Amount (INR)", "", ""],
+                ["Monthly Income", data.income, "", ""],
+                ["Total Expenses", totalSpent, "", ""],
+                ["Saved / (Overdraft)", saved, "", ""],
+                ["", "", "", ""],
+                ["Transaction Details", "", "", ""],
+                ["Description", "Category", "Amount (INR)", "Date"]
+            ];
+
             data.expenses.forEach(exp => {
-                const safeName = exp.name.replace(/"/g, '""'); 
-                const safeCat = exp.category.replace(/"/g, '""');
-                csvContent += `"${month}","Expense","${safeName}","${safeCat}","${exp.amount}"\n`;
+                const date = new Date(exp.id).toLocaleDateString('en-IN');
+                worksheetData.push([exp.name, exp.category, exp.amount, date]);
             });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            
+            worksheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+            
+            XLSX.utils.book_append_sheet(workbook, worksheet, tabName);
         }
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Expense_Report_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(workbook, `Consolidated_Report_${Date.now()}.xlsx`);
 }
 
-// Native iOS Sharing (WhatsApp, Mail, iMessage)
+// Share Detailed Text Summary Natively
 async function shareSummary() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to share.");
 
-    let summary = "📊 Expense Report\n\n";
+    let summary = "📊 Detailed Expense Report (Consolidated)\n\n";
     let grandIncome = 0;
     let grandSpent = 0;
 
@@ -319,14 +336,25 @@ async function shareSummary() {
         if (data) {
             const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - spent;
-            
             const dateObj = new Date(month + '-02'); 
-            const monthName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+            const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
             summary += `[${monthName}]\n`;
+            summary += `------------------------------\n`;
             summary += `Income: ${formatMoney(data.income)}\n`;
             summary += `Spent: ${formatMoney(spent)}\n`;
-            summary += `Saved: ${formatMoney(saved)}\n\n`;
+            summary += `Saved: ${formatMoney(saved)}\n`;
+            
+            if (data.expenses.length > 0) {
+                summary += `\nTop Transactions:\n`;
+                const sorted = [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
+                sorted.forEach(exp => {
+                    summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`;
+                });
+            } else {
+                summary += `No transactions logged.\n`;
+            }
+            summary += `------------------------------\n\n`;
             
             grandIncome += data.income;
             grandSpent += spent;
@@ -334,7 +362,7 @@ async function shareSummary() {
     });
 
     if (selectedMonths.length > 1) {
-        summary += `=== CONSOLIDATED ===\n`;
+        summary += `🌎 === GRAND TOTAL (ALL SELECTED MONTHS) ===\n`;
         summary += `Total Income: ${formatMoney(grandIncome)}\n`;
         summary += `Total Spent: ${formatMoney(grandSpent)}\n`;
         summary += `Total Saved: ${formatMoney(grandIncome - grandSpent)}\n`;
@@ -342,16 +370,93 @@ async function shareSummary() {
 
     if (navigator.share) {
         try {
-            await navigator.share({
-                title: 'Expense Report',
-                text: summary
-            });
-        } catch (err) {
-            console.log('Share canceled or failed', err);
-        }
-    } else {
-        alert("Your device doesn't support native sharing. Please use Download CSV instead.");
+            await navigator.share({ title: 'Consolidated Expense Report', text: summary });
+        } catch (err) { console.log('Share canceled or failed', err); }
+    } else { alert("Sharing not supported on this device."); }
+}
+
+// Generate Graphical Print-to-PDF Report
+function generatePrintReport() {
+    const selectedMonths = getSelectedMonths();
+    if (selectedMonths.length === 0) return alert("Please select months for the PDF report.");
+
+    const app = document.getElementById('mainApp');
+    app.classList.add('printing');
+    switchTab('history'); 
+
+    let printContainer = document.getElementById('printReport');
+    if (!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'printReport';
+        app.appendChild(printContainer);
     }
+    printContainer.innerHTML = ''; 
+
+    printContainer.innerHTML = `<h1 style="color: black; margin-bottom: 5px;">Consolidated Ledger Report</h1><p class="subtitle" style="margin-bottom: 20px;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>`;
+
+    selectedMonths.forEach(month => {
+        const data = JSON.parse(localStorage.getItem(month));
+        if (data) {
+            const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const saved = data.income - spent;
+            const dateObj = new Date(month + '-02'); 
+            const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const section = document.createElement('div');
+            section.className = 'print-month-section';
+            section.innerHTML = `
+                <h2>${monthName}</h2>
+                <div class="print-summary-row"><span class="print-summary-label">Monthly Income</span><span class="print-summary-value">${formatMoney(data.income)}</span></div>
+                <div class="print-summary-row"><span class="print-summary-label">Total Expenses</span><span class="print-summary-value negative">${formatMoney(spent)}</span></div>
+                <div class="print-summary-row"><span class="print-summary-label">Saved / Overdraft</span><span class="print-summary-value ${saved >= 0 ? 'positive' : 'negative'}">${formatMoney(saved)}</span></div>
+                
+                <h3 style="margin-top: 20px;">Budget Graph</h3>
+                <div style="height: 200px; margin-bottom: 20px;"><canvas id="printChart_${month}"></canvas></div>
+
+                <h3>Transaction Ledger</h3>
+            `;
+            
+            const table = document.createElement('table');
+            table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.fontSize = '14px'; table.style.marginBottom = '20px';
+            table.innerHTML = `<thead><tr style="background: #fafafa; border-bottom: 1px solid #e5e5ea;"><th style="text-align: left; padding: 10px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px;">Amount</th></tr></thead>`;
+            
+            const tbody = document.createElement('tbody');
+            if (data.expenses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 15px;">No transactions logged.</td></tr>`;
+            } else {
+                data.expenses.forEach(exp => {
+                    tbody.innerHTML += `<tr style="border-bottom: 1px solid #e5e5ea;"><td style="padding: 10px;">${exp.name}</td><td style="padding: 10px;">${exp.category}</td><td style="text-align: right; padding: 10px; color: var(--red); font-weight: 600;">-${formatMoney(exp.amount)}</td></tr>`;
+                });
+            }
+            table.appendChild(tbody);
+            section.appendChild(table);
+            printContainer.appendChild(section);
+
+            const ctx = document.getElementById(`printChart_${month}`).getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Spent', 'Remaining'],
+                    datasets: [{
+                        data: [spent, Math.max(0, saved)],
+                        backgroundColor: ['#ff3b30', '#34c759'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '75%',
+                    animation: { duration: 0 }, // Disable animation for immediate print rendering
+                    plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
+                }
+            });
+        }
+    });
+
+    setTimeout(() => {
+        window.print();
+        app.classList.remove('printing');
+        if (printContainer) printContainer.remove();
+    }, 1000); 
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
