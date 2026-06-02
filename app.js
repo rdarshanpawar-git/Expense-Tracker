@@ -81,17 +81,23 @@ function loadCategories() {
 
 // --- SECURITY AND IDENTITY VERIFICATION ---
 function updateLoginHints() {
-    const currentPin = localStorage.getItem('app_pin');
-    if (!currentPin) {
-        document.getElementById('loginTitle').innerText = "Set Up App";
-        document.getElementById('loginSubtitle').innerText = "Create a 4-digit security PIN";
-    } else {
-        document.getElementById('loginTitle').innerText = "Welcome Back";
-        document.getElementById('loginSubtitle').innerText = "Enter your 4-digit PIN";
+    try {
+        const currentPin = localStorage.getItem('app_pin');
+        if (!currentPin) {
+            const titleEl = document.getElementById('loginTitle');
+            const subtitleEl = document.getElementById('loginSubtitle');
+            if (titleEl) titleEl.innerText = "Set Up App";
+            if (subtitleEl) subtitleEl.innerText = "Create a 4-digit security PIN";
+        } else {
+            const titleEl = document.getElementById('loginTitle');
+            const subtitleEl = document.getElementById('loginSubtitle');
+            if (titleEl) titleEl.innerText = "Welcome Back";
+            if (subtitleEl) subtitleEl.innerText = "Enter your 4-digit PIN";
+        }
+    } catch (e) {
+        console.warn('updateLoginHints error:', e);
     }
 }
-
-updateLoginHints();
 
 function handleLogin() {
     const enteredPin = document.getElementById('pinInput').value;
@@ -129,6 +135,21 @@ function resetPin() {
     updateLoginHints();
     document.getElementById('pinInput').value = '';
     alert('PIN cleared. Please create a new PIN to continue.');
+}
+
+// Expose to global scope immediately after definition
+window.handleLogin = handleLogin;
+window.resetPin = resetPin;
+window.updateLoginHints = updateLoginHints;
+
+// Initialize login hints when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.updateLoginHints();
+    });
+} else {
+    // DOM already loaded (e.g., inline script after HTML)
+    window.updateLoginHints();
 }
 
 
@@ -1215,17 +1236,3 @@ async function runPdfSmokeCheck() {
         alert('Smoke-check error: ' + e.message);
     }
 }
-
-// --- EXPOSE HANDLERS TO GLOBAL SCOPE FOR INLINE ONCLICK USAGE ---
-window.handleLogin = handleLogin;
-window.resetPin = resetPin;
-window.updateLoginHints = updateLoginHints;
-
-// Initialize login hints when DOM loads
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        window.updateLoginHints();
-    } catch (e) {
-        console.warn('updateLoginHints on DOMContentLoaded failed:', e);
-    }
-});
