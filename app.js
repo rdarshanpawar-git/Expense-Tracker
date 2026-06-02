@@ -3,18 +3,29 @@ let currentMonth = localStorage.getItem('last_visited_month') || new Date().toIS
 document.getElementById('monthSelector').value = currentMonth;
 let chartInstance = null;
 
-// Currency Formatter - Engineered for Indian Rupee Architecture
 const formatMoney = (amount) => {
-    return new Intl.NumberFormat('en-IN', { 
-        style: 'currency', 
-        currency: 'INR',
-        maximumFractionDigits: 0 
-    }).format(amount);
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 };
+
+// --- DYNAMIC CATEGORY MANAGER ---
+function loadCategories() {
+    let savedCats = JSON.parse(localStorage.getItem('app_categories'));
+    if (!savedCats || savedCats.length === 0) {
+        // Default base categories
+        savedCats = ["Food & Dining", "Transportation", "Utilities & Bills", "Shopping", "Entertainment"];
+        localStorage.setItem('app_categories', JSON.stringify(savedCats));
+    }
+    const datalist = document.getElementById('categoryOptions');
+    datalist.innerHTML = '';
+    savedCats.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        datalist.appendChild(option);
+    });
+}
 
 // --- SECURITY AND IDENTITY VERIFICATION ---
 const savedPin = localStorage.getItem('app_pin');
-
 if (!savedPin) {
     document.getElementById('loginTitle').innerText = "Set Up App";
     document.getElementById('loginSubtitle').innerText = "Create a 4-digit security PIN";
@@ -47,6 +58,7 @@ function handleLogin() {
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
+    loadCategories(); // Load saved categories on unlock
     loadData();
     loadStatements();
 }
@@ -70,7 +82,7 @@ function switchTab(tab) {
 }
 
 // --- ACTIVE TRANSACTION METRICS ---
-let editingExpenseId = null; // Tracks if we are editing an item
+let editingExpenseId = null;
 
 function loadData() {
     currentMonth = document.getElementById('monthSelector').value;
@@ -79,7 +91,6 @@ function loadData() {
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
     document.getElementById('incomeInput').value = data.income || '';
     
-    // Balance and Net Worth Aggregation
     const totalExpenses = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
     const balance = data.income - totalExpenses;
     document.getElementById('currentBalance').innerText = formatMoney(balance);
@@ -103,27 +114,27 @@ function addExpense() {
 
     if (!name || !amount) return alert("Please clarify item details and pricing.");
 
+    // Auto-Save Custom Category Feature
+    let savedCats = JSON.parse(localStorage.getItem('app_categories')) || [];
+    if (!savedCats.includes(category)) {
+        savedCats.push(category);
+        localStorage.setItem('app_categories', JSON.stringify(savedCats));
+        loadCategories(); // Instantly refresh dropdown
+    }
+
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
     
     if (editingExpenseId) {
-        // Update existing transaction
         const index = data.expenses.findIndex(exp => exp.id === editingExpenseId);
-        if (index !== -1) {
-            data.expenses[index] = { id: editingExpenseId, name, amount, category };
-        }
+        if (index !== -1) data.expenses[index] = { id: editingExpenseId, name, amount, category };
         editingExpenseId = null;
-        
-        // Reset button text
-        const addBtn = document.getElementById('addBtn');
-        if (addBtn) addBtn.innerText = "Add Transaction";
+        document.getElementById('addBtn').innerText = "Add Transaction";
     } else {
-        // Add new transaction
         data.expenses.unshift({ id: Date.now(), name, amount, category }); 
     }
     
     localStorage.setItem(currentMonth, JSON.stringify(data));
     
-    // Wipe form fields cleaner
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
     document.getElementById('expenseCategory').value = '';
@@ -133,25 +144,18 @@ function addExpense() {
 function editExpense(id) {
     const data = JSON.parse(localStorage.getItem(currentMonth));
     const expense = data.expenses.find(exp => exp.id === id);
-    
     if (expense) {
         document.getElementById('expenseName').value = expense.name;
         document.getElementById('expenseAmount').value = expense.amount;
         document.getElementById('expenseCategory').value = expense.category;
-        
         editingExpenseId = id;
-        
-        // Change button text
-        const addBtn = document.getElementById('addBtn');
-        if (addBtn) addBtn.innerText = "Update Transaction";
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+        document.getElementById('addBtn').innerText = "Update Transaction";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
 function deleteExpense(id) {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
-    
     const data = JSON.parse(localStorage.getItem(currentMonth));
     data.expenses = data.expenses.filter(exp => exp.id !== id);
     localStorage.setItem(currentMonth, JSON.stringify(data));
@@ -161,12 +165,10 @@ function deleteExpense(id) {
 function renderExpenseList(expenses) {
     const listContainer = document.getElementById('expenseList');
     listContainer.innerHTML = ''; 
-
     if (expenses.length === 0) {
         listContainer.innerHTML = '<p style="color: #8e8e93; text-align: center; padding: 10px;">No recorded charges.</p>';
         return;
     }
-
     expenses.forEach(exp => {
         const item = document.createElement('div');
         item.className = 'expense-item';
@@ -190,9 +192,7 @@ function renderExpenseList(expenses) {
 function updateChart(data, totalExpenses, balance) {
     const chartRemaining = Math.max(0, balance);
     const ctx = document.getElementById('expenseChart').getContext('2d');
-    
     if (chartInstance) chartInstance.destroy(); 
-
     chartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -200,25 +200,23 @@ function updateChart(data, totalExpenses, balance) {
             datasets: [{
                 data: [totalExpenses, chartRemaining],
                 backgroundColor: ['#ff3b30', '#34c759'],
-                borderWidth: 0,
-                hoverOffset: 4
+                borderWidth: 0, hoverOffset: 4
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { family: '-apple-system', size: 13 } } }
-            }
+            responsive: true, maintainAspectRatio: false, cutout: '75%',
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { family: '-apple-system', size: 13 } } } }
         }
     });
 }
 
-// --- LEDGER STATEMENTS HISTORY ---
+// --- LEDGER STATEMENTS & EXPORT LOGIC ---
 function loadStatements() {
     const container = document.getElementById('statementsList');
+    const checkboxContainer = document.getElementById('exportMonthCheckboxes');
+    
     container.innerHTML = '';
+    checkboxContainer.innerHTML = '';
 
     const months = Object.keys(localStorage)
         .filter(key => key.match(/^\d{4}-\d{2}$/))
@@ -226,6 +224,7 @@ function loadStatements() {
 
     if (months.length === 0) {
         container.innerHTML = '<p style="color: #8e8e93; text-align: center; padding: 20px;">No historical timelines logged.</p>';
+        checkboxContainer.innerHTML = '<p style="font-size: 13px; color: #8e8e93;">No data to export.</p>';
         return;
     }
 
@@ -237,6 +236,16 @@ function loadStatements() {
         const dateObj = new Date(month + '-02'); 
         const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+        // 1. Populate the Export Checkboxes
+        const cbRow = document.createElement('div');
+        cbRow.className = 'checkbox-row';
+        cbRow.innerHTML = `
+            <input type="checkbox" class="export-cb" value="${month}" id="cb_${month}" checked>
+            <label for="cb_${month}">${monthName}</label>
+        `;
+        checkboxContainer.appendChild(cbRow);
+
+        // 2. Populate the History List below it
         const item = document.createElement('div');
         item.className = 'card statement-item';
         item.style.cursor = 'pointer';
@@ -260,6 +269,89 @@ function loadStatements() {
 
         container.appendChild(item);
     });
+}
+
+function getSelectedMonths() {
+    const checkboxes = document.querySelectorAll('.export-cb:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Export to CSV Spreadsheet
+function downloadCSV() {
+    const selectedMonths = getSelectedMonths();
+    if (selectedMonths.length === 0) return alert("Please select at least one month to export.");
+
+    let csvContent = "Month,Type,Description,Category,Amount (INR)\n";
+
+    selectedMonths.forEach(month => {
+        const data = JSON.parse(localStorage.getItem(month));
+        if (data) {
+            csvContent += `"${month}","Income","Total Monthly Budget","Income","${data.income}"\n`;
+            data.expenses.forEach(exp => {
+                const safeName = exp.name.replace(/"/g, '""'); 
+                const safeCat = exp.category.replace(/"/g, '""');
+                csvContent += `"${month}","Expense","${safeName}","${safeCat}","${exp.amount}"\n`;
+            });
+        }
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Expense_Report_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Native iOS Sharing (WhatsApp, Mail, iMessage)
+async function shareSummary() {
+    const selectedMonths = getSelectedMonths();
+    if (selectedMonths.length === 0) return alert("Please select at least one month to share.");
+
+    let summary = "📊 Expense Report\n\n";
+    let grandIncome = 0;
+    let grandSpent = 0;
+
+    selectedMonths.forEach(month => {
+        const data = JSON.parse(localStorage.getItem(month));
+        if (data) {
+            const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const saved = data.income - spent;
+            
+            const dateObj = new Date(month + '-02'); 
+            const monthName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+
+            summary += `[${monthName}]\n`;
+            summary += `Income: ${formatMoney(data.income)}\n`;
+            summary += `Spent: ${formatMoney(spent)}\n`;
+            summary += `Saved: ${formatMoney(saved)}\n\n`;
+            
+            grandIncome += data.income;
+            grandSpent += spent;
+        }
+    });
+
+    if (selectedMonths.length > 1) {
+        summary += `=== CONSOLIDATED ===\n`;
+        summary += `Total Income: ${formatMoney(grandIncome)}\n`;
+        summary += `Total Spent: ${formatMoney(grandSpent)}\n`;
+        summary += `Total Saved: ${formatMoney(grandIncome - grandSpent)}\n`;
+    }
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'Expense Report',
+                text: summary
+            });
+        } catch (err) {
+            console.log('Share canceled or failed', err);
+        }
+    } else {
+        alert("Your device doesn't support native sharing. Please use Download CSV instead.");
+    }
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
