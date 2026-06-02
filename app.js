@@ -11,7 +11,6 @@ const formatMoney = (amount) => {
 function loadCategories() {
     let savedCats = JSON.parse(localStorage.getItem('app_categories'));
     if (!savedCats || savedCats.length === 0) {
-        // Default base categories
         savedCats = ["Food & Dining", "Transportation", "Utilities & Bills", "Shopping", "Entertainment"];
         localStorage.setItem('app_categories', JSON.stringify(savedCats));
     }
@@ -58,7 +57,7 @@ function handleLogin() {
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
-    loadCategories(); // Load saved categories on unlock
+    loadCategories(); 
     loadData();
     loadStatements();
 }
@@ -114,12 +113,11 @@ function addExpense() {
 
     if (!name || !amount) return alert("Please clarify item details and pricing.");
 
-    // Auto-Save Custom Category Feature
     let savedCats = JSON.parse(localStorage.getItem('app_categories')) || [];
     if (!savedCats.includes(category)) {
         savedCats.push(category);
         localStorage.setItem('app_categories', JSON.stringify(savedCats));
-        loadCategories(); // Instantly refresh dropdown
+        loadCategories();
     }
 
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
@@ -236,7 +234,6 @@ function loadStatements() {
         const dateObj = new Date(month + '-02'); 
         const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-        // Populate Export Checkboxes
         const cbRow = document.createElement('div');
         cbRow.className = 'checkbox-row';
         cbRow.innerHTML = `
@@ -245,7 +242,6 @@ function loadStatements() {
         `;
         checkboxContainer.appendChild(cbRow);
 
-        // Populate History List
         const item = document.createElement('div');
         item.className = 'card statement-item';
         item.style.cursor = 'pointer';
@@ -312,9 +308,7 @@ function downloadExcel() {
             });
 
             const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-            
             worksheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
-            
             XLSX.utils.book_append_sheet(workbook, worksheet, tabName);
         }
     });
@@ -447,20 +441,17 @@ function generatePrintReport() {
                     responsive: true, 
                     maintainAspectRatio: false, 
                     cutout: '75%',
-                    animation: false, // Completely disable animation so it draws instantly
+                    animation: false, // Disables animation for instant print rendering
                     plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
                 }
             });
         }
     });
 
-    // Force browser to acknowledge the new elements before printing
-    document.body.offsetHeight; 
+    document.body.offsetHeight; // Forces a layout reflow
 
-    // Open print dialog immediately (avoids the popup blocker)
-    window.print();
+    window.print(); // Triggers the PDF generator immediately
     
-    // Clean up the UI after the print dialog closes
     app.classList.remove('printing');
     if (printContainer) printContainer.remove();
 }
