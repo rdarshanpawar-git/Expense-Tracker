@@ -80,15 +80,23 @@ function loadCategories() {
 }
 
 // --- SECURITY AND IDENTITY VERIFICATION ---
-const savedPin = localStorage.getItem('app_pin');
-if (!savedPin) {
-    document.getElementById('loginTitle').innerText = "Set Up App";
-    document.getElementById('loginSubtitle').innerText = "Create a 4-digit security PIN";
+function updateLoginHints() {
+    const currentPin = localStorage.getItem('app_pin');
+    if (!currentPin) {
+        document.getElementById('loginTitle').innerText = "Set Up App";
+        document.getElementById('loginSubtitle').innerText = "Create a 4-digit security PIN";
+    } else {
+        document.getElementById('loginTitle').innerText = "Welcome Back";
+        document.getElementById('loginSubtitle').innerText = "Enter your 4-digit PIN";
+    }
 }
+
+updateLoginHints();
 
 function handleLogin() {
     const enteredPin = document.getElementById('pinInput').value;
     const errorText = document.getElementById('loginError');
+    errorText.classList.add('hidden');
 
     if (enteredPin.length < 4) {
         errorText.innerText = "PIN must be exactly 4 digits";
@@ -96,11 +104,16 @@ function handleLogin() {
         return;
     }
 
+    const savedPin = localStorage.getItem('app_pin');
     if (!savedPin) {
+        // First-time setup
         localStorage.setItem('app_pin', enteredPin);
+        document.getElementById('pinInput').value = '';
+        updateLoginHints();
         unlockApp();
     } else {
         if (enteredPin === savedPin) {
+            document.getElementById('pinInput').value = '';
             unlockApp();
         } else {
             errorText.innerText = "Incorrect PIN code";
@@ -108,6 +121,23 @@ function handleLogin() {
             document.getElementById('pinInput').value = '';
         }
     }
+}
+
+function resetPin() {
+    if (!confirm('Clear saved PIN and return to setup?')) return;
+    localStorage.removeItem('app_pin');
+    updateLoginHints();
+    document.getElementById('pinInput').value = '';
+    alert('PIN cleared. Please create a new PIN to continue.');
+}
+
+function unregisterServiceWorkers() {
+    if (!('serviceWorker' in navigator)) return alert('Service Worker not supported in this browser');
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+        alert('Service workers unregistered. The app will reload.');
+        location.reload();
+    }).catch(err => alert('Failed to unregister service workers: ' + err.message));
 }
 
 function unlockApp() {

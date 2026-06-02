@@ -42,6 +42,10 @@
             <input type="password" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••">
             <button onclick="handleLogin()">Unlock</button>
             <p id="loginError" class="error-text hidden">Incorrect PIN</p>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button onclick="resetPin()" style="background:#ff3b30; width:auto; padding:8px 12px;">Reset PIN</button>
+                    <button onclick="unregisterServiceWorkers()" style="background:#999; width:auto; padding:8px 12px;">Unregister SW</button>
+                </div>
         </div>
     </div>
 
