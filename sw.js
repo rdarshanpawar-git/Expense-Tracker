@@ -1,4 +1,6 @@
-const CACHE_VERSION = 'expense-store-v1';
+// Change v1 to v2 to force the app to update
+const CACHE_VERSION = 'expense-store-v2';
+
 const URLS_TO_CACHE = [
   './',
   './index.html',

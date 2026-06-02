@@ -37,12 +37,14 @@ function loadCategories() {
         localStorage.setItem('app_categories', JSON.stringify(savedCats));
     }
     const datalist = document.getElementById('categoryOptions');
-    datalist.innerHTML = '';
-    savedCats.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat;
-        datalist.appendChild(option);
-    });
+    if(datalist) {
+        datalist.innerHTML = '';
+        savedCats.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            datalist.appendChild(option);
+        });
+    }
 }
 
 // --- SECURITY AND IDENTITY VERIFICATION ---
@@ -428,6 +430,9 @@ function generatePersonalImageReport() {
     }, 500);
 }
 
+document.getElementById('monthSelector').addEventListener('change', loadData);
+
+
 // ==========================================
 // --- NEW PROFESSIONAL SPLIT GROUP LOGIC ---
 // ==========================================
@@ -442,6 +447,7 @@ function sgSaveExpenses(groupId, exps) { localStorage.setItem(`split_exps_${grou
 function sgLoadGroups() {
     const groups = sgGetGroups();
     const container = document.getElementById('sgGroupCards');
+    if(!container) return;
     container.innerHTML = '';
     
     if (groups.length === 0) {
@@ -468,6 +474,7 @@ function sgLoadGroups() {
 
 function sgAddNewMemberField() {
     const container = document.getElementById('sgNewGroupMembersList');
+    if(!container) return;
     const count = container.children.length + 1;
     const input = document.createElement('input');
     input.type = 'text';
@@ -478,7 +485,9 @@ function sgAddNewMemberField() {
 }
 
 function sgCreateGroup() {
-    const name = document.getElementById('sgNewGroupName').value.trim();
+    const nameInput = document.getElementById('sgNewGroupName');
+    if(!nameInput) return;
+    const name = nameInput.value.trim();
     if (!name) return alert("Please enter a group name.");
     
     const inputs = document.querySelectorAll('.sg-new-member-input');
@@ -495,9 +504,11 @@ function sgCreateGroup() {
     groups.unshift({ id, name, members, createdAt: new Date().toISOString() });
     sgSaveGroups(groups);
     
-    document.getElementById('sgNewGroupName').value = '';
+    nameInput.value = '';
     const container = document.getElementById('sgNewGroupMembersList');
-    container.innerHTML = '<input type="text" class="sg-new-member-input" placeholder="Person 1 (e.g., You)" style="margin:0;"><input type="text" class="sg-new-member-input" placeholder="Person 2" style="margin:0;">';
+    if(container) {
+        container.innerHTML = '<input type="text" class="sg-new-member-input" placeholder="Person 1 (e.g., You)" style="margin:0;"><input type="text" class="sg-new-member-input" placeholder="Person 2" style="margin:0;">';
+    }
     
     sgOpenGroup(id);
 }
@@ -689,8 +700,6 @@ function sgSettleUp(from, to, amount) {
     const details = {};
     const group = sgGetGroups().find(g => g.id === currentSplitGroupId);
     
-    // Settlement logic: 'from' pays 'to'. 
-    // In our ledger, 'from' pays the money, 'to' takes the share debt.
     group.members.forEach(m => { details[m] = { paid: 0, share: 0 }; });
     details[from].paid = amount;
     details[to].share = amount;
