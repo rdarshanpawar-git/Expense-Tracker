@@ -24,7 +24,6 @@
 </head>
 <body>
 
-    <!-- Update Notification Banner -->
     <div id="updateNotification" class="update-banner hidden">
         <div class="update-banner-content">
             <span>✨ A new version is available!</span>
@@ -103,8 +102,7 @@
                 <input type="number" id="expenseAmount" placeholder="Amount (₹)">
                 
                 <input type="text" id="expenseCategory" list="categoryOptions" placeholder="Category (Select or Type Custom)">
-                <datalist id="categoryOptions">
-                    </datalist>
+                <datalist id="categoryOptions"></datalist>
 
                 <div style="margin-top: 12px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -138,8 +136,7 @@
                 <h3>Reports & Statements</h3>
                 <p class="subtitle" style="margin-bottom: 10px;">Select months for a consolidated report:</p>
                 
-                <div id="exportMonthCheckboxes" class="checkbox-container">
-                    </div>
+                <div id="exportMonthCheckboxes" class="checkbox-container"></div>
                 
                 <div class="flex-column" style="gap: 10px;">
                     <button onclick="shareSummary()">Share Detailed Text via App</button>
@@ -228,10 +225,10 @@
             </div>
             <button onclick="exportSplitPDF()" style="background-color: #5856d6; margin-top: 10px;">Export as PDF</button>
         </div>
+    </div>
 
     <script src="app.js"></script>
     <script>
-        // Register service worker with update detection
         registerServiceWorker();
     </script>
 </body>

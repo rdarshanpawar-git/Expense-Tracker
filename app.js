@@ -16,27 +16,22 @@ function registerServiceWorker() {
     }
 
     navigator.serviceWorker.register('sw.js').then(registration => {
-        // Check for updates every 30 minutes
         setInterval(() => {
             registration.update();
         }, 30 * 60 * 1000);
 
-        // Listen for new service worker waiting
         registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'waiting' && navigator.serviceWorker.controller) {
-                    // New service worker is ready, show notification
                     newServiceWorkerReady = newWorker;
                     showUpdateNotification();
                 }
             });
         });
 
-        // Handle service worker controller change
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            // New service worker has taken control, reload page
             window.location.reload();
         });
     }).catch(err => console.error('Service Worker registration failed:', err));
@@ -44,21 +39,16 @@ function registerServiceWorker() {
 
 function showUpdateNotification() {
     const banner = document.getElementById('updateNotification');
-    if (banner) {
-        banner.classList.remove('hidden');
-    }
+    if (banner) banner.classList.remove('hidden');
 }
 
 function dismissUpdate() {
     const banner = document.getElementById('updateNotification');
-    if (banner) {
-        banner.classList.add('hidden');
-    }
+    if (banner) banner.classList.add('hidden');
 }
 
 function acceptUpdate() {
     if (newServiceWorkerReady) {
-        // Tell the new service worker to skip waiting
         newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
     }
 }
@@ -112,7 +102,6 @@ function handleLogin() {
 
     const savedPin = localStorage.getItem('app_pin');
     if (!savedPin) {
-        // First-time setup
         localStorage.setItem('app_pin', enteredPin);
         document.getElementById('pinInput').value = '';
         updateLoginHints();
@@ -137,21 +126,15 @@ function resetPin() {
     alert('PIN cleared. Please create a new PIN to continue.');
 }
 
-// Expose to global scope immediately after definition
 window.handleLogin = handleLogin;
 window.resetPin = resetPin;
 window.updateLoginHints = updateLoginHints;
 
-// Initialize login hints when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.updateLoginHints();
-    });
+    document.addEventListener('DOMContentLoaded', () => { window.updateLoginHints(); });
 } else {
-    // DOM already loaded (e.g., inline script after HTML)
     window.updateLoginHints();
 }
-
 
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
@@ -282,14 +265,10 @@ function addExpense() {
     if (document.getElementById('splitToggle').checked) {
         const participants = [];
         document.querySelectorAll('.split-name').forEach(input => {
-            if (input.value.trim()) {
-                participants.push(input.value.trim());
-            }
+            if (input.value.trim()) participants.push(input.value.trim());
         });
         
-        if (participants.length < 2) {
-            return alert("Enter at least 2 participants for split expense.");
-        }
+        if (participants.length < 2) return alert("Enter at least 2 participants for split expense.");
         
         const sharePerPerson = amount / participants.length;
         splitData = {
@@ -329,7 +308,6 @@ function editExpense(id) {
         document.getElementById('expenseAmount').value = expense.amount;
         document.getElementById('expenseCategory').value = expense.category;
         
-        // Restore split data if exists
         if (expense.split && expense.split.isplit) {
             document.getElementById('splitToggle').checked = true;
             document.getElementById('splitCount').value = expense.split.participants.length;
@@ -479,7 +457,7 @@ function getSelectedMonths() {
     return Array.from(checkboxes).map(cb => cb.value);
 }
 
-// Export Professional Excel Spreadsheet (Multiple Tabs)
+// Export Professional Excel
 function downloadExcel() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to export.");
@@ -491,7 +469,6 @@ function downloadExcel() {
         if (data) {
             const totalSpent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - totalSpent;
-            
             const dateObj = new Date(month + '-02');
             const tabName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
 
@@ -523,7 +500,7 @@ function downloadExcel() {
     XLSX.writeFile(workbook, `Consolidated_Report_${Date.now()}.xlsx`);
 }
 
-// Share Detailed Text Summary Natively
+// Share Detailed Text Summary
 async function shareSummary() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to share.");
@@ -540,171 +517,104 @@ async function shareSummary() {
             const dateObj = new Date(month + '-02'); 
             const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            summary += `[${monthName}]\n`;
-            summary += `------------------------------\n`;
-            summary += `Income: ${formatMoney(data.income)}\n`;
-            summary += `Spent: ${formatMoney(spent)}\n`;
-            summary += `Saved: ${formatMoney(saved)}\n`;
+            summary += `[${monthName}]\n------------------------------\nIncome: ${formatMoney(data.income)}\nSpent: ${formatMoney(spent)}\nSaved: ${formatMoney(saved)}\n`;
             
             if (data.expenses.length > 0) {
                 summary += `\nTop Transactions:\n`;
                 const sorted = [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
-                sorted.forEach(exp => {
-                    summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`;
-                });
+                sorted.forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`; });
             } else {
                 summary += `No transactions logged.\n`;
             }
             summary += `------------------------------\n\n`;
-            
             grandIncome += data.income;
             grandSpent += spent;
         }
     });
 
     if (selectedMonths.length > 1) {
-        summary += `🌎 === GRAND TOTAL (ALL SELECTED MONTHS) ===\n`;
-        summary += `Total Income: ${formatMoney(grandIncome)}\n`;
-        summary += `Total Spent: ${formatMoney(grandSpent)}\n`;
-        summary += `Total Saved: ${formatMoney(grandIncome - grandSpent)}\n`;
+        summary += `🌎 === GRAND TOTAL ===\nTotal Income: ${formatMoney(grandIncome)}\nTotal Spent: ${formatMoney(grandSpent)}\nTotal Saved: ${formatMoney(grandIncome - grandSpent)}\n`;
     }
 
     if (navigator.share) {
-        try {
-            await navigator.share({ title: 'Consolidated Expense Report', text: summary });
-        } catch (err) { console.log('Share canceled or failed', err); }
+        try { await navigator.share({ title: 'Consolidated Expense Report', text: summary }); } 
+        catch (err) { console.log('Share canceled', err); }
     } else { alert("Sharing not supported on this device."); }
 }
 
-// Generate Graphical Print-to-PDF Report
+// Generate PDF via Browser Print
 function generatePrintReport() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select months for the PDF report.");
 
-    // Create a temporary container for PDF content
-    const pdfContainer = document.createElement('div');
-    pdfContainer.id = 'pdfReportContent';
-    pdfContainer.style.position = 'fixed';
-    pdfContainer.style.left = '0';
-    pdfContainer.style.top = '0';
-    pdfContainer.style.width = '800px';
-    pdfContainer.style.opacity = '0';
-    pdfContainer.style.pointerEvents = 'none';
-    pdfContainer.style.zIndex = '9999';
-    pdfContainer.style.backgroundColor = '#ffffff';
-    pdfContainer.style.padding = '40px';
-    pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const app = document.getElementById('mainApp');
+    app.classList.add('printing');
+    switchTab('history'); 
 
-    let htmlContent = `
-        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #007aff; padding-bottom: 20px;">
-            <h1 style="color: #1c1c1e; margin: 0 0 5px 0; font-size: 32px;">Expense Ledger Report</h1>
-            <p style="color: #8e8e93; margin: 0; font-size: 14px;">Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN')}</p>
-        </div>
-    `;
+    let printContainer = document.getElementById('printReport');
+    if (!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'printReport';
+        app.appendChild(printContainer);
+    }
+    printContainer.innerHTML = `<h1 style="color: black; margin-bottom: 5px;">Consolidated Ledger Report</h1><p class="subtitle" style="margin-bottom: 20px;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>`;
 
-    let grandIncome = 0;
-    let grandSpent = 0;
-
-    selectedMonths.forEach((month, idx) => {
+    selectedMonths.forEach(month => {
         const data = JSON.parse(localStorage.getItem(month));
         if (data) {
             const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - spent;
-            const dateObj = new Date(month + '-02');
+            const dateObj = new Date(month + '-02'); 
             const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            grandIncome += data.income;
-            grandSpent += spent;
-
-            htmlContent += `
-                <div style="margin-bottom: 40px; page-break-inside: avoid; border: 1px solid #e5e5ea; padding: 20px; border-radius: 12px; ${idx > 0 ? 'margin-top: 30px;' : ''}">
-                    <h2 style="color: #007aff; margin: 0 0 20px 0; font-size: 24px; border-bottom: 2px solid #f2f2f7; padding-bottom: 10px;">${monthName}</h2>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
-                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Monthly Income</p>
-                            <p style="color: #34c759; margin: 0; font-size: 20px; font-weight: bold;">${formatMoney(data.income)}</p>
-                        </div>
-                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
-                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Total Expenses</p>
-                            <p style="color: #ff3b30; margin: 0; font-size: 20px; font-weight: bold;">-${formatMoney(spent)}</p>
-                        </div>
-                        <div style="background: ${saved >= 0 ? '#d1f4d1' : '#ffd9d9'}; padding: 15px; border-radius: 8px;">
-                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Balance</p>
-                            <p style="color: ${saved >= 0 ? '#34c759' : '#ff3b30'}; margin: 0; font-size: 20px; font-weight: bold;">${formatMoney(saved)}</p>
-                        </div>
-                    </div>
-
-                    <h3 style="color: #1c1c1e; margin: 20px 0 15px 0; font-size: 16px; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Transaction Details</h3>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                        <thead>
-                            <tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;">
-                                <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Description</th>
-                                <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Category</th>
-                                <th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.expenses.length === 0 
-                                ? `<tr><td colspan="3" style="text-align: center; color: #8e8e93; padding: 15px;">No transactions recorded</td></tr>`
-                                : data.expenses.map(exp => `
-                                    <tr style="border-bottom: 1px solid #e5e5ea;">
-                                        <td style="padding: 12px; color: #1c1c1e;">${exp.name}</td>
-                                        <td style="padding: 12px; color: #8e8e93; font-size: 12px;">${exp.category}</td>
-                                        <td style="padding: 12px; text-align: right; color: #ff3b30; font-weight: 600;">-${formatMoney(exp.amount)}</td>
-                                    </tr>
-                                `).join('')
-                            }
-                        </tbody>
-                    </table>
-                </div>
+            const section = document.createElement('div');
+            section.className = 'print-month-section';
+            section.innerHTML = `
+                <h2>${monthName}</h2>
+                <div class="print-summary-row"><span class="print-summary-label">Monthly Income</span><span class="print-summary-value">${formatMoney(data.income)}</span></div>
+                <div class="print-summary-row"><span class="print-summary-label">Total Expenses</span><span class="print-summary-value negative">${formatMoney(spent)}</span></div>
+                <div class="print-summary-row"><span class="print-summary-label">Saved / Overdraft</span><span class="print-summary-value ${saved >= 0 ? 'positive' : 'negative'}">${formatMoney(saved)}</span></div>
+                <h3 style="margin-top: 20px;">Budget Graph</h3>
+                <div style="height: 200px; margin-bottom: 20px;"><canvas id="printChart_${month}"></canvas></div>
+                <h3>Transaction Ledger</h3>
             `;
+            
+            const table = document.createElement('table');
+            table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.fontSize = '14px'; table.style.marginBottom = '20px';
+            table.innerHTML = `<thead><tr style="background: #fafafa; border-bottom: 1px solid #e5e5ea;"><th style="text-align: left; padding: 10px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px;">Amount</th></tr></thead>`;
+            
+            const tbody = document.createElement('tbody');
+            if (data.expenses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 15px;">No transactions logged.</td></tr>`;
+            } else {
+                data.expenses.forEach(exp => {
+                    tbody.innerHTML += `<tr style="border-bottom: 1px solid #e5e5ea;"><td style="padding: 10px;">${exp.name}</td><td style="padding: 10px;">${exp.category}</td><td style="text-align: right; padding: 10px; color: var(--red); font-weight: 600;">-${formatMoney(exp.amount)}</td></tr>`;
+                });
+            }
+            table.appendChild(tbody);
+            section.appendChild(table);
+            printContainer.appendChild(section);
+
+            const ctx = document.getElementById(`printChart_${month}`).getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Spent', 'Remaining'],
+                    datasets: [{ data: [spent, Math.max(0, saved)], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false,
+                    plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
+                }
+            });
         }
     });
 
-    if (selectedMonths.length > 1) {
-        htmlContent += `
-            <div style="background: linear-gradient(135deg, #007aff, #005bb5); color: white; padding: 25px; border-radius: 12px; margin-top: 30px; page-break-inside: avoid;">
-                <h2 style="color: white; margin: 0 0 15px 0; font-size: 22px;">Consolidated Summary</h2>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                    <div>
-                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Income</p>
-                        <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatMoney(grandIncome)}</p>
-                    </div>
-                    <div>
-                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Expenses</p>
-                        <p style="margin: 0; font-size: 24px; font-weight: bold;">-${formatMoney(grandSpent)}</p>
-                    </div>
-                    <div>
-                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Overall Balance</p>
-                        <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatMoney(grandIncome - grandSpent)}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    pdfContainer.innerHTML = htmlContent;
-    document.body.appendChild(pdfContainer);
-
-    // Generate PDF using html2pdf
-    const element = document.getElementById('pdfReportContent');
-    const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `Expense_Report_${new Date().toISOString().slice(0, 7)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'], after: '.page-break' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        document.body.removeChild(pdfContainer);
-    }).catch(err => {
-        console.error('PDF generation failed:', err);
-        alert('PDF generation failed. Please try again.');
-        document.body.removeChild(pdfContainer);
-    });
+    document.body.offsetHeight; // Force reflow
+    window.print();
+    
+    app.classList.remove('printing');
+    if (printContainer) printContainer.remove();
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
@@ -740,40 +650,21 @@ function generateSplitSummary() {
     const expenseName = document.getElementById('splitExpenseName').value.trim();
     const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
     
-    if (!expenseName || !totalAmount || totalAmount <= 0) {
-        return alert('Please enter expense name and valid amount');
-    }
+    if (!expenseName || !totalAmount || totalAmount <= 0) return alert('Please enter expense name and valid amount');
     
     const participants = [];
     document.querySelectorAll('.split-participant-name').forEach(input => {
-        if (input.value.trim()) {
-            participants.push(input.value.trim());
-        }
+        if (input.value.trim()) participants.push(input.value.trim());
     });
     
-    if (participants.length < 2) {
-        return alert('Please add at least 2 participants');
-    }
+    if (participants.length < 2) return alert('Please add at least 2 participants');
     
     const amountPerPerson = (totalAmount / participants.length).toFixed(2);
     document.getElementById('splitAmountPerPerson').innerText = formatMoney(amountPerPerson);
     
-    // Generate summary text
-    let summaryText = `💰 EXPENSE SPLIT SUMMARY\n`;
-    summaryText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    summaryText += `Expense: ${expenseName}\n`;
-    summaryText += `Total Amount: ${formatMoney(totalAmount)}\n`;
-    summaryText += `Number of People: ${participants.length}\n`;
-    summaryText += `Amount per Person: ${formatMoney(amountPerPerson)}\n\n`;
-    
-    summaryText += `Participants & Amounts:\n`;
-    summaryText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    participants.forEach((name, idx) => {
-        summaryText += `${idx + 1}. ${name}: ${formatMoney(amountPerPerson)}\n`;
-    });
-    
-    summaryText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    summaryText += `Generated: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}\n`;
+    let summaryText = `💰 EXPENSE SPLIT SUMMARY\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nExpense: ${expenseName}\nTotal Amount: ${formatMoney(totalAmount)}\nNumber of People: ${participants.length}\nAmount per Person: ${formatMoney(amountPerPerson)}\n\nParticipants & Amounts:\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    participants.forEach((name, idx) => { summaryText += `${idx + 1}. ${name}: ${formatMoney(amountPerPerson)}\n`; });
+    summaryText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nGenerated: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}\n`;
     
     document.getElementById('splitSummaryText').innerText = summaryText;
     document.getElementById('splitSummaryOutput').classList.remove('hidden');
@@ -781,11 +672,8 @@ function generateSplitSummary() {
 
 function copySplitSummary() {
     const summaryText = document.getElementById('splitSummaryText').innerText;
-    navigator.clipboard.writeText(summaryText).then(() => {
-        alert('Summary copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-    });
+    navigator.clipboard.writeText(summaryText).then(() => { alert('Summary copied to clipboard!'); })
+    .catch(err => { console.error('Failed to copy:', err); });
 }
 
 function shareSplitSummary() {
@@ -793,10 +681,7 @@ function shareSplitSummary() {
     const summaryText = document.getElementById('splitSummaryText').innerText;
     
     if (navigator.share) {
-        navigator.share({
-            title: `Split Expense: ${expenseName}`,
-            text: summaryText
-        }).catch(err => console.log('Share canceled:', err));
+        navigator.share({ title: `Split Expense: ${expenseName}`, text: summaryText }).catch(err => console.log('Share canceled:', err));
     } else {
         alert('Sharing not supported. Use "Copy to Clipboard" instead.');
     }
@@ -808,81 +693,43 @@ function exportSplitPDF() {
     const participants = [];
     
     document.querySelectorAll('.split-participant-name').forEach(input => {
-        if (input.value.trim()) {
-            participants.push(input.value.trim());
-        }
+        if (input.value.trim()) participants.push(input.value.trim());
     });
 
-    if (!expenseName || !totalAmount || participants.length < 2) {
-        return alert('Please complete the split expense details');
-    }
-
+    if (!expenseName || !totalAmount || participants.length < 2) return alert('Please complete the split expense details');
     const amountPerPerson = (totalAmount / participants.length).toFixed(2);
 
-    // Create a temporary container for PDF content
     const pdfContainer = document.createElement('div');
     pdfContainer.id = 'splitPdfContent';
-    pdfContainer.style.position = 'fixed';
-    pdfContainer.style.left = '0';
-    pdfContainer.style.top = '0';
-    pdfContainer.style.width = '800px';
-    pdfContainer.style.opacity = '0';
-    pdfContainer.style.pointerEvents = 'none';
-    pdfContainer.style.zIndex = '9999';
-    pdfContainer.style.backgroundColor = '#ffffff';
-    pdfContainer.style.padding = '40px';
-    pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Object.assign(pdfContainer.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999', backgroundColor:'#ffffff', padding:'40px', fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
 
     const htmlContent = `
         <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #007aff; padding-bottom: 20px;">
             <h1 style="color: #1c1c1e; margin: 0 0 10px 0; font-size: 32px;">💰 Expense Split Receipt</h1>
             <p style="color: #8e8e93; margin: 0; font-size: 14px;">Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN')}</p>
         </div>
-
         <div style="background: linear-gradient(135deg, #007aff, #005bb5); color: white; padding: 25px; border-radius: 12px; margin-bottom: 30px;">
             <h2 style="color: white; margin: 0 0 15px 0; font-size: 24px;">${expenseName}</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Amount</p>
-                    <p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(totalAmount)}</p>
-                </div>
-                <div>
-                    <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Amount Per Person</p>
-                    <p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(amountPerPerson)}</p>
-                </div>
+                <div><p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Amount</p><p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(totalAmount)}</p></div>
+                <div><p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Amount Per Person</p><p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(amountPerPerson)}</p></div>
             </div>
         </div>
-
         <h3 style="color: #1c1c1e; margin: 25px 0 15px 0; font-size: 18px; border-bottom: 2px solid #e5e5ea; padding-bottom: 10px;">Participant Breakdown</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <thead>
-                <tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;">
-                    <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Participant</th>
-                    <th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount to Pay</th>
-                </tr>
-            </thead>
+            <thead><tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;"><th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Participant</th><th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount to Pay</th></tr></thead>
             <tbody>
-                ${participants.map((name, idx) => `
-                    <tr style="border-bottom: 1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}">
-                        <td style="padding: 12px; color: #1c1c1e; font-weight: 500;">${idx + 1}. ${name}</td>
-                        <td style="padding: 12px; text-align: right; color: #007aff; font-weight: 600; font-size: 16px;">${formatMoney(amountPerPerson)}</td>
-                    </tr>
-                `).join('')}
+                ${participants.map((name, idx) => `<tr style="border-bottom: 1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}"><td style="padding: 12px; color: #1c1c1e; font-weight: 500;">${idx + 1}. ${name}</td><td style="padding: 12px; text-align: right; color: #007aff; font-weight: 600; font-size: 16px;">${formatMoney(amountPerPerson)}</td></tr>`).join('')}
             </tbody>
         </table>
-
         <div style="background: #f0f7ff; border-left: 4px solid #007aff; padding: 15px; margin-top: 30px; border-radius: 4px;">
-            <p style="margin: 0; color: #1c1c1e; font-size: 13px;">
-                <strong>Note:</strong> Each participant should pay the amount listed above. Total of all payments should equal ${formatMoney(totalAmount)}.
-            </p>
+            <p style="margin: 0; color: #1c1c1e; font-size: 13px;"><strong>Note:</strong> Each participant should pay the amount listed above. Total of all payments should equal ${formatMoney(totalAmount)}.</p>
         </div>
     `;
 
     pdfContainer.innerHTML = htmlContent;
     document.body.appendChild(pdfContainer);
 
-    // Generate PDF using html2pdf
-    const element = document.getElementById('splitPdfContent');
     const opt = {
         margin: [10, 10, 10, 10],
         filename: `Split_Expense_${expenseName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`,
@@ -892,23 +739,21 @@ function exportSplitPDF() {
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
+    html2pdf().set(opt).from(pdfContainer).save().then(() => {
         document.body.removeChild(pdfContainer);
         alert('PDF exported successfully!');
     }).catch(err => {
         console.error('PDF generation failed:', err);
         alert('PDF export failed. Please try again.');
-        if (document.body.contains(pdfContainer)) {
-            document.body.removeChild(pdfContainer);
-        }
+        if (document.body.contains(pdfContainer)) document.body.removeChild(pdfContainer);
     });
 }
 
-// Initialize split form on load
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('splitParticipantsList')) {
-        updateSplitParticipantFields();
-    }
+    if (document.getElementById('splitParticipantsList')) updateSplitParticipantFields();
+    loadSplitGroups();
+    const sel = document.getElementById('splitGroupSelect'); 
+    if (sel && sel.value) loadGroupExpenses(sel.value);
 });
 
 // --- SPLIT GROUP MANAGEMENT ---
@@ -919,9 +764,7 @@ function loadSplitGroups() {
     sel.innerHTML = '';
     groups.forEach(g => {
         const opt = document.createElement('option');
-        opt.value = g.id;
-        opt.text = g.name;
-        sel.appendChild(opt);
+        opt.value = g.id; opt.text = g.name; sel.appendChild(opt);
     });
     if (groups.length === 0) {
         const opt = document.createElement('option'); opt.value = ''; opt.text = 'No groups yet'; sel.appendChild(opt);
@@ -956,9 +799,7 @@ function addSplitToGroup() {
 
     const share = parseFloat((totalAmount / participants.length).toFixed(2));
     const expense = {
-        id: Date.now().toString(),
-        name: expenseName,
-        total: totalAmount,
+        id: Date.now().toString(), name: expenseName, total: totalAmount,
         participants: participants.map(p => ({ name: p.name, share, paid: false })),
         createdAt: new Date().toISOString()
     };
@@ -1037,25 +878,20 @@ function renderGroupExpenses(groupId, expenses) {
 }
 
 function saveParticipantShare(input) {
-    const groupId = input.dataset.group;
-    const expId = input.dataset.exp;
-    const idx = parseInt(input.dataset.idx, 10);
+    const groupId = input.dataset.group; const expId = input.dataset.exp; const idx = parseInt(input.dataset.idx, 10);
     const val = parseFloat(input.value) || 0;
     const key = `split_group_${groupId}`;
     const list = JSON.parse(localStorage.getItem(key)) || [];
     const exp = list.find(e => e.id === expId);
     if (!exp) return;
     exp.participants[idx].share = val;
-    // if paidAmount > share, cap it
     const paid = parseFloat(exp.participants[idx].paidAmount || 0);
     if (paid > val) exp.participants[idx].paidAmount = val;
     localStorage.setItem(key, JSON.stringify(list));
 }
 
 function saveParticipantPaidAmount(input) {
-    const groupId = input.dataset.group;
-    const expId = input.dataset.exp;
-    const idx = parseInt(input.dataset.idx, 10);
+    const groupId = input.dataset.group; const expId = input.dataset.exp; const idx = parseInt(input.dataset.idx, 10);
     const val = parseFloat(input.value) || 0;
     const key = `split_group_${groupId}`;
     const list = JSON.parse(localStorage.getItem(key)) || [];
@@ -1079,9 +915,7 @@ function equalizeShares(groupId, expId) {
 }
 
 function toggleParticipantPaid(checkbox) {
-    const groupId = checkbox.dataset.group;
-    const expId = checkbox.dataset.exp;
-    const idx = parseInt(checkbox.dataset.idx, 10);
+    const groupId = checkbox.dataset.group; const expId = checkbox.dataset.exp; const idx = parseInt(checkbox.dataset.idx, 10);
     const key = `split_group_${groupId}`;
     const list = JSON.parse(localStorage.getItem(key)) || [];
     const exp = list.find(e=>e.id===expId);
@@ -1112,7 +946,6 @@ function generateGroupReportPDF(groupId) {
     const key = `split_group_${groupId}`;
     const expenses = JSON.parse(localStorage.getItem(key)) || [];
 
-    // compute totals per participant (supports partial paid amounts)
     const map = {};
     expenses.forEach(exp => {
         exp.participants.forEach(p => {
@@ -1124,7 +957,6 @@ function generateGroupReportPDF(groupId) {
         });
     });
 
-    // Build HTML
     let html = `
         <div style="padding:30px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto, sans-serif;">
             <div style="text-align:center; margin-bottom:20px;">
@@ -1137,9 +969,7 @@ function generateGroupReportPDF(groupId) {
                 <tbody>
     `;
     Object.keys(map).forEach(name => {
-        const owed = map[name].owed;
-        const paid = map[name].paid;
-        const rem = owed - paid;
+        const owed = map[name].owed; const paid = map[name].paid; const rem = owed - paid;
         html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">${name}</td><td style="padding:10px; text-align:right;">${formatMoney(owed)}</td><td style="padding:10px; text-align:right;">${formatMoney(paid)}</td><td style="padding:10px; text-align:right;">${formatMoney(rem)}</td></tr>`;
     });
 
@@ -1155,19 +985,11 @@ function generateGroupReportPDF(groupId) {
             </div>
         `;
     });
-
     html += '</div>';
 
     const container = document.createElement('div');
     container.id = 'groupPdfContent';
-    // Place the container in the viewport but invisible so html2canvas can render it reliably
-    container.style.position = 'fixed';
-    container.style.left = '0';
-    container.style.top = '0';
-    container.style.width = '800px';
-    container.style.opacity = '0';
-    container.style.pointerEvents = 'none';
-    container.style.zIndex = '9999';
+    Object.assign(container.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999' });
     container.innerHTML = html;
     document.body.appendChild(container);
 
@@ -1179,23 +1001,13 @@ function generateGroupReportPDF(groupId) {
         jsPDF:{ orientation:'portrait', unit:'mm', format:'a4' }
     };
 
-    html2pdf().set(opt).from(container).save().then(()=>{
-        container.remove();
-    }).catch(err=>{ console.error(err); container.remove(); alert('Failed to export group PDF'); });
+    html2pdf().set(opt).from(container).save().then(()=>{ container.remove(); })
+    .catch(err=>{ console.error(err); container.remove(); alert('Failed to export group PDF'); });
 }
 
-// Initialize groups on load
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('splitParticipantsList')) updateSplitParticipantFields();
-    loadSplitGroups();
-    const sel = document.getElementById('splitGroupSelect'); if (sel && sel.value) loadGroupExpenses(sel.value);
-});
-
-// --- In-browser smoke test for PDF generation ---
 async function runPdfSmokeCheck() {
     try {
         console.log('Running PDF smoke-check...');
-        // prepare test data
         localStorage.setItem('split_groups', JSON.stringify([{id:'test_g', name:'Smoke Test Group'}]));
         localStorage.setItem('split_group_test_g', JSON.stringify([
             { id: 'test_e1', name: 'Dinner', total: 300, participants: [ {name:'Alice', share:100, paidAmount:50, paid:false}, {name:'Bob', share:100, paidAmount:100, paid:true}, {name:'Charlie', share:100, paidAmount:0, paid:false}], createdAt: new Date().toISOString() }
@@ -1204,16 +1016,27 @@ async function runPdfSmokeCheck() {
         if (window.loadSplitGroups) loadSplitGroups();
         if (window.loadGroupExpenses) loadGroupExpenses('test_g');
 
-        // ensure html2pdf doesn't try to download — patch for test
         const orig = window.html2pdf;
-        window.html2pdf = function(){
-            return { set: function(){ return { from: function(){ return { save: function(){ return new Promise(resolve=>setTimeout(resolve,1000)); } } } } };
+        
+        // --- THIS IS THE FIXED BRACKET BLOCK ---
+        window.html2pdf = function() {
+            return {
+                set: function() {
+                    return {
+                        from: function() {
+                            return {
+                                save: function() {
+                                    return new Promise(resolve => setTimeout(resolve, 1000));
+                                }
+                            };
+                        }
+                    };
+                }
+            };
         };
 
-        // trigger generation
         if (window.generateGroupReportPDF) generateGroupReportPDF('test_g');
 
-        // wait for container
         await new Promise((res, rej)=>{
             let tries = 0;
             const iv = setInterval(()=>{
@@ -1228,7 +1051,6 @@ async function runPdfSmokeCheck() {
             out.textContent = 'PDF content preview:\n' + preview;
         }).catch(err=>{ console.error(err); alert('Smoke-check failed: '+err.message); });
 
-        // restore html2pdf
         window.html2pdf = orig;
         console.log('Smoke-check complete.');
     } catch (e) {
