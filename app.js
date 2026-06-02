@@ -444,19 +444,25 @@ function generatePrintReport() {
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '75%',
-                    animation: { duration: 0 }, // Disable animation for immediate print rendering
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '75%',
+                    animation: false, // Completely disable animation so it draws instantly
                     plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
                 }
             });
         }
     });
 
-    setTimeout(() => {
-        window.print();
-        app.classList.remove('printing');
-        if (printContainer) printContainer.remove();
-    }, 1000); 
+    // Force browser to acknowledge the new elements before printing
+    document.body.offsetHeight; 
+
+    // Open print dialog immediately (avoids the popup blocker)
+    window.print();
+    
+    // Clean up the UI after the print dialog closes
+    app.classList.remove('printing');
+    if (printContainer) printContainer.remove();
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
