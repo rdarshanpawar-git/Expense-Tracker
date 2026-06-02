@@ -160,7 +160,17 @@
                 
                 <h3 style="border-top: 1px solid var(--border-color); padding-top: 20px;">Create New Group</h3>
                 <input type="text" id="sgNewGroupName" placeholder="Group Name (e.g., Goa Trip)">
-                <input type="text" id="sgNewGroupMembers" placeholder="Members (comma separated, e.g., Me, John, Sarah)">
+                
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <label style="font-size: 14px; font-weight: 600;">Participants</label>
+                    <button class="btn btn-outline btn-sm" onclick="sgAddNewMemberField()">+ Add Person</button>
+                </div>
+                
+                <div id="sgNewGroupMembersList" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" class="sg-new-member-input" placeholder="Person 1 (e.g., You)" style="margin:0;">
+                    <input type="text" class="sg-new-member-input" placeholder="Person 2" style="margin:0;">
+                </div>
+                
                 <button class="btn btn-primary" onclick="sgCreateGroup()">Create Group</button>
             </div>
         </div>
@@ -173,27 +183,25 @@
 
             <div class="card">
                 <h3>Balances & Settlements</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Who owes who across the entire group.</p>
                 <div id="sgBalancesList"></div>
             </div>
 
             <div class="card">
                 <h3>Add Expense</h3>
-                <input type="text" id="sgExpName" placeholder="What was this for? (e.g., Dinner)">
+                <input type="text" id="sgExpName" placeholder="Description (e.g., Dinner)">
+                <input type="number" id="sgExpAmount" placeholder="Total Amount (₹)" step="0.01">
                 
-                <div style="background: #f9f9fb; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);">
-                    <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 8px; font-weight: 600; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
-                        <div>Participant</div>
-                        <div style="text-align: right;">Paid (₹)</div>
-                        <div style="text-align: right;">Share (₹)</div>
-                    </div>
-                    <div id="sgExpMembersList"></div>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-                        <div style="font-weight: 600; font-size: 15px;">Total: <span id="sgExpTotal" style="color: var(--accent-blue); font-weight: 700;">₹0</span></div>
-                        <button class="btn btn-secondary btn-sm" onclick="sgSplitEqually()">Split Equally</button>
-                    </div>
+                <div style="margin-bottom: 16px; background: #f9f9fb; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px;">Who Paid?</label>
+                    <select id="sgExpPayer" style="background: white; margin-bottom: 16px;"></select>
+
+                    <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px;">Split Equally Between:</label>
+                    <div id="sgExpSplitBetween" style="display: flex; flex-direction: column; gap: 8px;">
+                        </div>
                 </div>
-                <button class="btn btn-primary" style="margin-top: 16px;" onclick="sgSaveExpense()">Save Expense</button>
+
+                <button class="btn btn-primary" onclick="sgSaveExpense()">Add Expense to Ledger</button>
             </div>
 
             <div class="card">
