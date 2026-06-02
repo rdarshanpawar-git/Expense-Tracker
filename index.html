@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Expense Tracker</title>
     
     <link rel="manifest" href="manifest.json">
@@ -17,8 +20,20 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+
+    <!-- Update Notification Banner -->
+    <div id="updateNotification" class="update-banner hidden">
+        <div class="update-banner-content">
+            <span>✨ A new version is available!</span>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="dismissUpdate()" class="update-btn-dismiss">Dismiss</button>
+                <button onclick="acceptUpdate()" class="update-btn-accept">Update Now</button>
+            </div>
+        </div>
+    </div>
 
     <div id="loginScreen" class="overlay">
         <div class="login-card">
@@ -30,11 +45,32 @@
         </div>
     </div>
 
+    <div class="container hidden" id="homeScreen">
+        <div class="home-container">
+            <h1 style="text-align: center; margin-bottom: 40px;">Welcome</h1>
+            
+            <div class="home-card" onclick="openExpenseTracker()">
+                <div class="home-icon">💰</div>
+                <h2>Expense Tracker</h2>
+                <p>Track your monthly income and expenses</p>
+            </div>
+
+            <div class="home-card" onclick="openSplitExpense()">
+                <div class="home-icon">👥</div>
+                <h2>Split Expense</h2>
+                <p>Split and share expenses with friends</p>
+            </div>
+
+            <button style="margin-top: 30px; width: 100%;" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
     <div class="container hidden" id="mainApp">
         
         <div class="nav-bar">
             <button class="nav-btn active" id="navHome" onclick="switchTab('home')">Dashboard</button>
             <button class="nav-btn" id="navHistory" onclick="switchTab('history')">Statements</button>
+            <button class="nav-btn" id="navMenu" onclick="switchTab('menu')">Menu</button>
         </div>
 
         <div id="tabHome">
@@ -114,13 +150,64 @@
             <div id="statementsList"></div>
         </div>
 
+        <div id="tabMenu" class="hidden">
+            <h1>Menu</h1>
+            <button onclick="openExpenseTracker()" style="margin-bottom: 10px;">Back to Expense Tracker</button>
+            <button onclick="openSplitExpense()" style="margin-bottom: 10px;">Go to Split Expense</button>
+            <button onclick="logout()" style="background-color: #ff3b30;">Logout</button>
+        </div>
+
     </div>
+
+    <div class="container hidden" id="splitExpenseApp">
+        <div style="margin-bottom: 20px;">
+            <button onclick="backToHome()" style="background-color: #666;">← Back</button>
+        </div>
+
+        <h1>Split Expense</h1>
+        <p class="subtitle">Add participants and split the expense</p>
+
+        <div class="card">
+            <h3>Expense Details</h3>
+            <input type="text" id="splitExpenseName" placeholder="What are you splitting? (e.g., Dinner)">
+            <input type="number" id="splitExpenseAmount" placeholder="Total Amount (₹)" step="0.01">
+            <input type="number" id="splitParticipantCount" placeholder="Number of people" value="2" min="2" max="20" onchange="updateSplitParticipantFields()">
+        </div>
+
+        <div class="card">
+            <h3>Participants</h3>
+            <div id="splitParticipantsList"></div>
+        </div>
+
+        <div class="card">
+            <h3>Split Summary</h3>
+            <div style="padding: 15px; background: #f9f9fb; border-radius: 10px;">
+                <p style="margin: 0; color: #666;">Amount per person:</p>
+                <p id="splitAmountPerPerson" style="margin: 5px 0; font-size: 20px; font-weight: bold; color: #36a2eb;">₹0</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="resetSplitForm()" style="background-color: #999;">Reset</button>
+                <button onclick="generateSplitSummary()" style="background-color: #34c759;">Generate & Share</button>
+            </div>
+        </div>
+
+        <div id="splitSummaryOutput" class="card hidden">
+            <h3>Share This Summary</h3>
+            <div id="splitSummaryText" style="padding: 15px; background: #f9f9fb; border-radius: 10px; margin-bottom: 15px; white-space: pre-wrap; font-family: monospace; font-size: 12px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="copySplitSummary()">Copy to Clipboard</button>
+                <button onclick="shareSplitSummary()" style="background-color: #007aff;">Share via Message</button>
+            </div>
+            <button onclick="exportSplitPDF()" style="background-color: #5856d6; margin-top: 10px;">Export as PDF</button>
+        </div>
 
     <script src="app.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
+        // Register service worker with update detection
+        registerServiceWorker();
     </script>
 </body>
 </html>

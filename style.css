@@ -56,6 +56,73 @@ h3 { margin-top: 0; font-size: 18px; font-weight: 600; margin-bottom: 16px; bord
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* Update Notification Banner */
+.update-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #34c759, #30b954);
+    color: white;
+    padding: 12px 16px;
+    z-index: 999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.3s ease-out;
+}
+
+.update-banner.hidden {
+    display: none;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.update-banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 500px;
+    margin: 0 auto;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.update-btn-dismiss, .update-btn-accept {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.update-btn-dismiss {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.update-btn-dismiss:active {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.update-btn-accept {
+    background: white;
+    color: #34c759;
+}
+
+.update-btn-accept:active {
+    opacity: 0.9;
+}
+
 /* Premium Gradient Balance Card */
 .balance-card {
     background: linear-gradient(135deg, var(--accent-blue), #005bb5);
@@ -180,3 +247,51 @@ button:active { background-color: #005bb5; }
 .print-summary-value { font-weight: 700; color: var(--text-primary); }
 .print-summary-value.positive { color: var(--green); }
 .print-summary-value.negative { color: var(--red); }
+
+/* Home Screen Styles */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    padding: 20px;
+}
+
+.home-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+}
+
+.home-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    border-color: var(--accent-blue);
+}
+
+.home-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.home-card h2 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.home-card p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}

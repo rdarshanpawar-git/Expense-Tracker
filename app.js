@@ -2,10 +2,66 @@
 let currentMonth = localStorage.getItem('last_visited_month') || new Date().toISOString().slice(0, 7); 
 document.getElementById('monthSelector').value = currentMonth;
 let chartInstance = null;
+let newServiceWorkerReady = null;
 
 const formatMoney = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 };
+
+// --- SERVICE WORKER UPDATE MANAGEMENT ---
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+        console.log('Service Worker not supported');
+        return;
+    }
+
+    navigator.serviceWorker.register('sw.js').then(registration => {
+        // Check for updates every 30 minutes
+        setInterval(() => {
+            registration.update();
+        }, 30 * 60 * 1000);
+
+        // Listen for new service worker waiting
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'waiting' && navigator.serviceWorker.controller) {
+                    // New service worker is ready, show notification
+                    newServiceWorkerReady = newWorker;
+                    showUpdateNotification();
+                }
+            });
+        });
+
+        // Handle service worker controller change
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            // New service worker has taken control, reload page
+            window.location.reload();
+        });
+    }).catch(err => console.error('Service Worker registration failed:', err));
+}
+
+function showUpdateNotification() {
+    const banner = document.getElementById('updateNotification');
+    if (banner) {
+        banner.classList.remove('hidden');
+    }
+}
+
+function dismissUpdate() {
+    const banner = document.getElementById('updateNotification');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+}
+
+function acceptUpdate() {
+    if (newServiceWorkerReady) {
+        // Tell the new service worker to skip waiting
+        newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
+    }
+}
 
 // --- DYNAMIC CATEGORY MANAGER ---
 function loadCategories() {
@@ -56,27 +112,59 @@ function handleLogin() {
 
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('homeScreen').classList.remove('hidden');
+}
+
+function openExpenseTracker() {
+    document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('splitExpenseApp').classList.add('hidden');
     loadCategories(); 
     loadData();
     loadStatements();
+}
+
+function openSplitExpense() {
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('splitExpenseApp').classList.remove('hidden');
+    resetSplitForm();
+}
+
+function backToHome() {
+    document.getElementById('homeScreen').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('splitExpenseApp').classList.add('hidden');
+}
+
+function logout() {
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('splitExpenseApp').classList.add('hidden');
+    document.getElementById('pinInput').value = '';
 }
 
 // --- SUB-MENU/TAB DISPATCHER ---
 function switchTab(tab) {
     document.getElementById('tabHome').classList.add('hidden');
     document.getElementById('tabHistory').classList.add('hidden');
+    document.getElementById('tabMenu').classList.add('hidden');
     document.getElementById('navHome').classList.remove('active');
     document.getElementById('navHistory').classList.remove('active');
+    document.getElementById('navMenu').classList.remove('active');
 
     if (tab === 'home') {
         document.getElementById('tabHome').classList.remove('hidden');
         document.getElementById('navHome').classList.add('active');
         loadData();
-    } else {
+    } else if (tab === 'history') {
         document.getElementById('tabHistory').classList.remove('hidden');
         document.getElementById('navHistory').classList.add('active');
         loadStatements();
+    } else if (tab === 'menu') {
+        document.getElementById('tabMenu').classList.remove('hidden');
+        document.getElementById('navMenu').classList.add('active');
     }
 }
 
@@ -450,86 +538,324 @@ function generatePrintReport() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select months for the PDF report.");
 
-    const app = document.getElementById('mainApp');
-    app.classList.add('printing');
-    switchTab('history'); 
+    // Create a temporary container for PDF content
+    const pdfContainer = document.createElement('div');
+    pdfContainer.id = 'pdfReportContent';
+    pdfContainer.style.position = 'absolute';
+    pdfContainer.style.left = '-9999px';
+    pdfContainer.style.width = '800px';
+    pdfContainer.style.backgroundColor = '#ffffff';
+    pdfContainer.style.padding = '40px';
+    pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
-    let printContainer = document.getElementById('printReport');
-    if (!printContainer) {
-        printContainer = document.createElement('div');
-        printContainer.id = 'printReport';
-        app.appendChild(printContainer);
-    }
-    printContainer.innerHTML = ''; 
+    let htmlContent = `
+        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #007aff; padding-bottom: 20px;">
+            <h1 style="color: #1c1c1e; margin: 0 0 5px 0; font-size: 32px;">Expense Ledger Report</h1>
+            <p style="color: #8e8e93; margin: 0; font-size: 14px;">Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN')}</p>
+        </div>
+    `;
 
-    printContainer.innerHTML = `<h1 style="color: black; margin-bottom: 5px;">Consolidated Ledger Report</h1><p class="subtitle" style="margin-bottom: 20px;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>`;
+    let grandIncome = 0;
+    let grandSpent = 0;
 
-    selectedMonths.forEach(month => {
+    selectedMonths.forEach((month, idx) => {
         const data = JSON.parse(localStorage.getItem(month));
         if (data) {
             const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - spent;
-            const dateObj = new Date(month + '-02'); 
+            const dateObj = new Date(month + '-02');
             const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            const section = document.createElement('div');
-            section.className = 'print-month-section';
-            section.innerHTML = `
-                <h2>${monthName}</h2>
-                <div class="print-summary-row"><span class="print-summary-label">Monthly Income</span><span class="print-summary-value">${formatMoney(data.income)}</span></div>
-                <div class="print-summary-row"><span class="print-summary-label">Total Expenses</span><span class="print-summary-value negative">${formatMoney(spent)}</span></div>
-                <div class="print-summary-row"><span class="print-summary-label">Saved / Overdraft</span><span class="print-summary-value ${saved >= 0 ? 'positive' : 'negative'}">${formatMoney(saved)}</span></div>
-                
-                <h3 style="margin-top: 20px;">Budget Graph</h3>
-                <div style="height: 200px; margin-bottom: 20px;"><canvas id="printChart_${month}"></canvas></div>
+            grandIncome += data.income;
+            grandSpent += spent;
 
-                <h3>Transaction Ledger</h3>
+            htmlContent += `
+                <div style="margin-bottom: 40px; page-break-inside: avoid; border: 1px solid #e5e5ea; padding: 20px; border-radius: 12px; ${idx > 0 ? 'margin-top: 30px;' : ''}">
+                    <h2 style="color: #007aff; margin: 0 0 20px 0; font-size: 24px; border-bottom: 2px solid #f2f2f7; padding-bottom: 10px;">${monthName}</h2>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
+                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Monthly Income</p>
+                            <p style="color: #34c759; margin: 0; font-size: 20px; font-weight: bold;">${formatMoney(data.income)}</p>
+                        </div>
+                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
+                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Total Expenses</p>
+                            <p style="color: #ff3b30; margin: 0; font-size: 20px; font-weight: bold;">-${formatMoney(spent)}</p>
+                        </div>
+                        <div style="background: ${saved >= 0 ? '#d1f4d1' : '#ffd9d9'}; padding: 15px; border-radius: 8px;">
+                            <p style="color: #8e8e93; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Balance</p>
+                            <p style="color: ${saved >= 0 ? '#34c759' : '#ff3b30'}; margin: 0; font-size: 20px; font-weight: bold;">${formatMoney(saved)}</p>
+                        </div>
+                    </div>
+
+                    <h3 style="color: #1c1c1e; margin: 20px 0 15px 0; font-size: 16px; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Transaction Details</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;">
+                                <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Description</th>
+                                <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Category</th>
+                                <th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.expenses.length === 0 
+                                ? `<tr><td colspan="3" style="text-align: center; color: #8e8e93; padding: 15px;">No transactions recorded</td></tr>`
+                                : data.expenses.map(exp => `
+                                    <tr style="border-bottom: 1px solid #e5e5ea;">
+                                        <td style="padding: 12px; color: #1c1c1e;">${exp.name}</td>
+                                        <td style="padding: 12px; color: #8e8e93; font-size: 12px;">${exp.category}</td>
+                                        <td style="padding: 12px; text-align: right; color: #ff3b30; font-weight: 600;">-${formatMoney(exp.amount)}</td>
+                                    </tr>
+                                `).join('')
+                            }
+                        </tbody>
+                    </table>
+                </div>
             `;
-            
-            const table = document.createElement('table');
-            table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.fontSize = '14px'; table.style.marginBottom = '20px';
-            table.innerHTML = `<thead><tr style="background: #fafafa; border-bottom: 1px solid #e5e5ea;"><th style="text-align: left; padding: 10px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px;">Amount</th></tr></thead>`;
-            
-            const tbody = document.createElement('tbody');
-            if (data.expenses.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 15px;">No transactions logged.</td></tr>`;
-            } else {
-                data.expenses.forEach(exp => {
-                    tbody.innerHTML += `<tr style="border-bottom: 1px solid #e5e5ea;"><td style="padding: 10px;">${exp.name}</td><td style="padding: 10px;">${exp.category}</td><td style="text-align: right; padding: 10px; color: var(--red); font-weight: 600;">-${formatMoney(exp.amount)}</td></tr>`;
-                });
-            }
-            table.appendChild(tbody);
-            section.appendChild(table);
-            printContainer.appendChild(section);
-
-            const ctx = document.getElementById(`printChart_${month}`).getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Spent', 'Remaining'],
-                    datasets: [{
-                        data: [spent, Math.max(0, saved)],
-                        backgroundColor: ['#ff3b30', '#34c759'],
-                        borderWidth: 0,
-                    }]
-                },
-                options: {
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    cutout: '75%',
-                    animation: false, // Disables animation for instant print rendering
-                    plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } }
-                }
-            });
         }
     });
 
-    document.body.offsetHeight; // Forces a layout reflow
+    if (selectedMonths.length > 1) {
+        htmlContent += `
+            <div style="background: linear-gradient(135deg, #007aff, #005bb5); color: white; padding: 25px; border-radius: 12px; margin-top: 30px; page-break-inside: avoid;">
+                <h2 style="color: white; margin: 0 0 15px 0; font-size: 22px;">Consolidated Summary</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Income</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatMoney(grandIncome)}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Expenses</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: bold;">-${formatMoney(grandSpent)}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Overall Balance</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatMoney(grandIncome - grandSpent)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
-    window.print(); // Triggers the PDF generator immediately
-    
-    app.classList.remove('printing');
-    if (printContainer) printContainer.remove();
+    pdfContainer.innerHTML = htmlContent;
+    document.body.appendChild(pdfContainer);
+
+    // Generate PDF using html2pdf
+    const element = document.getElementById('pdfReportContent');
+    const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Expense_Report_${new Date().toISOString().slice(0, 7)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'], after: '.page-break' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        document.body.removeChild(pdfContainer);
+    }).catch(err => {
+        console.error('PDF generation failed:', err);
+        alert('PDF generation failed. Please try again.');
+        document.body.removeChild(pdfContainer);
+    });
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
+
+// --- SPLIT EXPENSE FEATURE ---
+function updateSplitParticipantFields() {
+    const count = parseInt(document.getElementById('splitParticipantCount').value) || 2;
+    const container = document.getElementById('splitParticipantsList');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        div.innerHTML = `
+            <label style="font-size: 12px; color: #666;">Person ${i + 1}:</label>
+            <input type="text" class="split-participant-name" placeholder="Name (e.g., John)" style="width: 100%; margin-top: 4px;">
+        `;
+        container.appendChild(div);
+    }
+}
+
+function resetSplitForm() {
+    document.getElementById('splitExpenseName').value = '';
+    document.getElementById('splitExpenseAmount').value = '';
+    document.getElementById('splitParticipantCount').value = '2';
+    document.getElementById('splitParticipantsList').innerHTML = '';
+    document.getElementById('splitAmountPerPerson').innerText = '₹0';
+    document.getElementById('splitSummaryOutput').classList.add('hidden');
+    updateSplitParticipantFields();
+}
+
+function generateSplitSummary() {
+    const expenseName = document.getElementById('splitExpenseName').value.trim();
+    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
+    
+    if (!expenseName || !totalAmount || totalAmount <= 0) {
+        return alert('Please enter expense name and valid amount');
+    }
+    
+    const participants = [];
+    document.querySelectorAll('.split-participant-name').forEach(input => {
+        if (input.value.trim()) {
+            participants.push(input.value.trim());
+        }
+    });
+    
+    if (participants.length < 2) {
+        return alert('Please add at least 2 participants');
+    }
+    
+    const amountPerPerson = (totalAmount / participants.length).toFixed(2);
+    document.getElementById('splitAmountPerPerson').innerText = formatMoney(amountPerPerson);
+    
+    // Generate summary text
+    let summaryText = `💰 EXPENSE SPLIT SUMMARY\n`;
+    summaryText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    summaryText += `Expense: ${expenseName}\n`;
+    summaryText += `Total Amount: ${formatMoney(totalAmount)}\n`;
+    summaryText += `Number of People: ${participants.length}\n`;
+    summaryText += `Amount per Person: ${formatMoney(amountPerPerson)}\n\n`;
+    
+    summaryText += `Participants & Amounts:\n`;
+    summaryText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    participants.forEach((name, idx) => {
+        summaryText += `${idx + 1}. ${name}: ${formatMoney(amountPerPerson)}\n`;
+    });
+    
+    summaryText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    summaryText += `Generated: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}\n`;
+    
+    document.getElementById('splitSummaryText').innerText = summaryText;
+    document.getElementById('splitSummaryOutput').classList.remove('hidden');
+}
+
+function copySplitSummary() {
+    const summaryText = document.getElementById('splitSummaryText').innerText;
+    navigator.clipboard.writeText(summaryText).then(() => {
+        alert('Summary copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+
+function shareSplitSummary() {
+    const expenseName = document.getElementById('splitExpenseName').value;
+    const summaryText = document.getElementById('splitSummaryText').innerText;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Split Expense: ${expenseName}`,
+            text: summaryText
+        }).catch(err => console.log('Share canceled:', err));
+    } else {
+        alert('Sharing not supported. Use "Copy to Clipboard" instead.');
+    }
+}
+
+function exportSplitPDF() {
+    const expenseName = document.getElementById('splitExpenseName').value.trim();
+    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
+    const participants = [];
+    
+    document.querySelectorAll('.split-participant-name').forEach(input => {
+        if (input.value.trim()) {
+            participants.push(input.value.trim());
+        }
+    });
+
+    if (!expenseName || !totalAmount || participants.length < 2) {
+        return alert('Please complete the split expense details');
+    }
+
+    const amountPerPerson = (totalAmount / participants.length).toFixed(2);
+
+    // Create a temporary container for PDF content
+    const pdfContainer = document.createElement('div');
+    pdfContainer.id = 'splitPdfContent';
+    pdfContainer.style.position = 'absolute';
+    pdfContainer.style.left = '-9999px';
+    pdfContainer.style.width = '800px';
+    pdfContainer.style.backgroundColor = '#ffffff';
+    pdfContainer.style.padding = '40px';
+    pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+    const htmlContent = `
+        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #007aff; padding-bottom: 20px;">
+            <h1 style="color: #1c1c1e; margin: 0 0 10px 0; font-size: 32px;">💰 Expense Split Receipt</h1>
+            <p style="color: #8e8e93; margin: 0; font-size: 14px;">Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN')}</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #007aff, #005bb5); color: white; padding: 25px; border-radius: 12px; margin-bottom: 30px;">
+            <h2 style="color: white; margin: 0 0 15px 0; font-size: 24px;">${expenseName}</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Amount</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(totalAmount)}</p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Amount Per Person</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(amountPerPerson)}</p>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="color: #1c1c1e; margin: 25px 0 15px 0; font-size: 18px; border-bottom: 2px solid #e5e5ea; padding-bottom: 10px;">Participant Breakdown</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;">
+                    <th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Participant</th>
+                    <th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount to Pay</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${participants.map((name, idx) => `
+                    <tr style="border-bottom: 1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}">
+                        <td style="padding: 12px; color: #1c1c1e; font-weight: 500;">${idx + 1}. ${name}</td>
+                        <td style="padding: 12px; text-align: right; color: #007aff; font-weight: 600; font-size: 16px;">${formatMoney(amountPerPerson)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <div style="background: #f0f7ff; border-left: 4px solid #007aff; padding: 15px; margin-top: 30px; border-radius: 4px;">
+            <p style="margin: 0; color: #1c1c1e; font-size: 13px;">
+                <strong>Note:</strong> Each participant should pay the amount listed above. Total of all payments should equal ${formatMoney(totalAmount)}.
+            </p>
+        </div>
+    `;
+
+    pdfContainer.innerHTML = htmlContent;
+    document.body.appendChild(pdfContainer);
+
+    // Generate PDF using html2pdf
+    const element = document.getElementById('splitPdfContent');
+    const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Split_Expense_${expenseName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        document.body.removeChild(pdfContainer);
+        alert('PDF exported successfully!');
+    }).catch(err => {
+        console.error('PDF generation failed:', err);
+        alert('PDF export failed. Please try again.');
+        if (document.body.contains(pdfContainer)) {
+            document.body.removeChild(pdfContainer);
+        }
+    });
+}
+
+// Initialize split form on load
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('splitParticipantsList')) {
+        updateSplitParticipantFields();
+    }
+});
