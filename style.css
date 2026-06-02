@@ -111,19 +111,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent-blue); box
 .home-card h2 { margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: var(--text-primary); }
 .home-card p { margin: 0; font-size: 15px; color: var(--text-secondary); }
 
-/* Split Group List */
-.split-group-expense { margin-bottom: 12px; }
-.split-group-expense .participant-paid { text-decoration: line-through; color: #8e8e93; }
-
-/* --- GRAPHICAL PDF PRINT ENGINE --- */
-#mainApp.printing { padding: 0; }
-#mainApp.printing .card, #mainApp.printing h1, #mainApp.printing h3, #mainApp.printing .nav-bar, #mainApp.printing .subtitle, #mainApp.printing .checkbox-container { box-shadow: none; border: none; padding: 0; margin: 0; background: transparent; }
-#mainApp.printing .nav-bar, #mainApp.printing .checkbox-container, #mainApp.printing .flex-row .btn, #mainApp.printing .flex-column > .btn, #mainApp.printing h1, #mainApp.printing .subtitle:not(#printReport h1 + .subtitle), #mainApp.printing .expense-item .action-btns, #mainApp.printing .action-btns { display: none !important; }
-#printReport { width: 100%; background-color: white; padding: 20px; }
-.print-month-section { page-break-after: always; margin-bottom: 40px; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
-.print-month-section h2 { font-size: 24px; color: var(--accent-blue); margin-bottom: 15px; }
-.print-summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
-.print-summary-label { font-weight: 600; color: var(--text-secondary); }
-.print-summary-value { font-weight: 700; color: var(--text-primary); }
-.print-summary-value.positive { color: var(--green); }
-.print-summary-value.negative { color: var(--red); }
+/* Update Banner */
+.update-banner { position: fixed; top: 0; left: 0; right: 0; background: var(--green); color: white; padding: 12px 16px; z-index: 999; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.update-banner-content { display: flex; justify-content: space-between; align-items: center; max-width: 500px; margin: 0 auto; font-size: 14px; font-weight: 500; }

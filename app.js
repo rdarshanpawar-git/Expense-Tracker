@@ -10,11 +10,7 @@ const formatMoney = (amount) => {
 
 // --- SERVICE WORKER UPDATE MANAGEMENT ---
 function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) {
-        console.log('Service Worker not supported');
-        return;
-    }
-
+    if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('sw.js').then(registration => {
         setInterval(() => { registration.update(); }, 30 * 60 * 1000);
         registration.addEventListener('updatefound', () => {
@@ -22,27 +18,16 @@ function registerServiceWorker() {
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'waiting' && navigator.serviceWorker.controller) {
                     newServiceWorkerReady = newWorker;
-                    showUpdateNotification();
+                    const banner = document.getElementById('updateNotification');
+                    if (banner) banner.classList.remove('hidden');
                 }
             });
         });
         navigator.serviceWorker.addEventListener('controllerchange', () => { window.location.reload(); });
-    }).catch(err => console.error('Service Worker registration failed:', err));
+    }).catch(err => console.error('SW error:', err));
 }
-
-function showUpdateNotification() {
-    const banner = document.getElementById('updateNotification');
-    if (banner) banner.classList.remove('hidden');
-}
-
-function dismissUpdate() {
-    const banner = document.getElementById('updateNotification');
-    if (banner) banner.classList.add('hidden');
-}
-
-function acceptUpdate() {
-    if (newServiceWorkerReady) newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
-}
+function dismissUpdate() { document.getElementById('updateNotification').classList.add('hidden'); }
+function acceptUpdate() { if (newServiceWorkerReady) newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' }); }
 
 // --- DYNAMIC CATEGORY MANAGER ---
 function loadCategories() {
@@ -62,20 +47,16 @@ function loadCategories() {
 
 // --- SECURITY AND IDENTITY VERIFICATION ---
 function updateLoginHints() {
-    try {
-        const currentPin = localStorage.getItem('app_pin');
-        if (!currentPin) {
-            const titleEl = document.getElementById('loginTitle');
-            const subtitleEl = document.getElementById('loginSubtitle');
-            if (titleEl) titleEl.innerText = "Set Up App";
-            if (subtitleEl) subtitleEl.innerText = "Create a 4-digit security PIN";
-        } else {
-            const titleEl = document.getElementById('loginTitle');
-            const subtitleEl = document.getElementById('loginSubtitle');
-            if (titleEl) titleEl.innerText = "Welcome Back";
-            if (subtitleEl) subtitleEl.innerText = "Enter your 4-digit PIN";
-        }
-    } catch (e) { console.warn('updateLoginHints error:', e); }
+    const currentPin = localStorage.getItem('app_pin');
+    const titleEl = document.getElementById('loginTitle');
+    const subtitleEl = document.getElementById('loginSubtitle');
+    if (!currentPin) {
+        if (titleEl) titleEl.innerText = "Set Up App";
+        if (subtitleEl) subtitleEl.innerText = "Create a 4-digit security PIN";
+    } else {
+        if (titleEl) titleEl.innerText = "Welcome Back";
+        if (subtitleEl) subtitleEl.innerText = "Enter your 4-digit PIN";
+    }
 }
 
 function handleLogin() {
@@ -115,41 +96,31 @@ function resetPin() {
     alert('PIN cleared. Please create a new PIN to continue.');
 }
 
-window.handleLogin = handleLogin;
-window.resetPin = resetPin;
-window.updateLoginHints = updateLoginHints;
+window.handleLogin = handleLogin; window.resetPin = resetPin; window.updateLoginHints = updateLoginHints;
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => { window.updateLoginHints(); }); } else { window.updateLoginHints(); }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { window.updateLoginHints(); });
-} else { window.updateLoginHints(); }
-
+// Navigation
 function unlockApp() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 }
-
 function openExpenseTracker() {
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     document.getElementById('splitExpenseApp').classList.add('hidden');
-    loadCategories(); 
-    loadData();
-    loadStatements();
+    loadCategories(); loadData(); loadStatements();
 }
-
 function openSplitExpense() {
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.add('hidden');
     document.getElementById('splitExpenseApp').classList.remove('hidden');
-    resetSplitForm();
+    resetSplitForm(); loadSplitGroups();
 }
-
 function backToHome() {
     document.getElementById('homeScreen').classList.remove('hidden');
     document.getElementById('mainApp').classList.add('hidden');
     document.getElementById('splitExpenseApp').classList.add('hidden');
 }
-
 function logout() {
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
@@ -158,7 +129,6 @@ function logout() {
     document.getElementById('pinInput').value = '';
 }
 
-// --- SUB-MENU/TAB DISPATCHER ---
 function switchTab(tab) {
     document.getElementById('tabHome').classList.add('hidden');
     document.getElementById('tabHistory').classList.add('hidden');
@@ -167,49 +137,13 @@ function switchTab(tab) {
     document.getElementById('navHistory').classList.remove('active');
     document.getElementById('navMenu').classList.remove('active');
 
-    if (tab === 'home') {
-        document.getElementById('tabHome').classList.remove('hidden');
-        document.getElementById('navHome').classList.add('active');
-        loadData();
-    } else if (tab === 'history') {
-        document.getElementById('tabHistory').classList.remove('hidden');
-        document.getElementById('navHistory').classList.add('active');
-        loadStatements();
-    } else if (tab === 'menu') {
-        document.getElementById('tabMenu').classList.remove('hidden');
-        document.getElementById('navMenu').classList.add('active');
-    }
+    if (tab === 'home') { document.getElementById('tabHome').classList.remove('hidden'); document.getElementById('navHome').classList.add('active'); loadData(); }
+    else if (tab === 'history') { document.getElementById('tabHistory').classList.remove('hidden'); document.getElementById('navHistory').classList.add('active'); loadStatements(); }
+    else if (tab === 'menu') { document.getElementById('tabMenu').classList.remove('hidden'); document.getElementById('navMenu').classList.add('active'); }
 }
 
 // --- ACTIVE TRANSACTION METRICS ---
 let editingExpenseId = null;
-
-function toggleSplitMode() {
-    const splitSection = document.getElementById('splitSection');
-    const toggle = document.getElementById('splitToggle');
-    if (toggle.checked) {
-        splitSection.style.display = 'block';
-        updateSplitFields();
-    } else {
-        splitSection.style.display = 'none';
-    }
-}
-
-function updateSplitFields() {
-    const count = parseInt(document.getElementById('splitCount').value) || 2;
-    const container = document.getElementById('splitParticipants');
-    container.innerHTML = '';
-    
-    for (let i = 0; i < count; i++) {
-        const div = document.createElement('div');
-        div.style.marginBottom = '10px';
-        div.innerHTML = `
-            <label style="font-size: 13px; color: #666; font-weight: 500;">Person ${i + 1}:</label>
-            <input type="text" class="split-name" placeholder="Name" style="width: 100%; margin-top: 6px;">
-        `;
-        container.appendChild(div);
-    }
-}
 
 function loadData() {
     currentMonth = document.getElementById('monthSelector').value;
@@ -243,33 +177,18 @@ function addExpense() {
 
     let savedCats = JSON.parse(localStorage.getItem('app_categories')) || [];
     if (!savedCats.includes(category)) {
-        savedCats.push(category);
-        localStorage.setItem('app_categories', JSON.stringify(savedCats));
-        loadCategories();
-    }
-
-    let splitData = null;
-    if (document.getElementById('splitToggle').checked) {
-        const participants = [];
-        document.querySelectorAll('.split-name').forEach(input => {
-            if (input.value.trim()) participants.push(input.value.trim());
-        });
-        
-        if (participants.length < 2) return alert("Enter at least 2 participants for split expense.");
-        
-        const sharePerPerson = amount / participants.length;
-        splitData = { isplit: true, participants: participants, sharePerPerson: parseFloat(sharePerPerson.toFixed(2)) };
+        savedCats.push(category); localStorage.setItem('app_categories', JSON.stringify(savedCats)); loadCategories();
     }
 
     const data = JSON.parse(localStorage.getItem(currentMonth)) || { income: 0, expenses: [] };
     
     if (editingExpenseId) {
         const index = data.expenses.findIndex(exp => exp.id === editingExpenseId);
-        if (index !== -1) data.expenses[index] = { id: editingExpenseId, name, amount, category, split: splitData };
+        if (index !== -1) data.expenses[index] = { id: editingExpenseId, name, amount, category };
         editingExpenseId = null;
         document.getElementById('addBtn').innerText = "Add Transaction";
     } else {
-        data.expenses.unshift({ id: Date.now(), name, amount, category, split: splitData }); 
+        data.expenses.unshift({ id: Date.now(), name, amount, category }); 
     }
     
     localStorage.setItem(currentMonth, JSON.stringify(data));
@@ -277,9 +196,6 @@ function addExpense() {
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
     document.getElementById('expenseCategory').value = '';
-    document.getElementById('splitToggle').checked = false;
-    document.getElementById('splitSection').style.display = 'none';
-    document.getElementById('splitParticipants').innerHTML = '';
     loadData();
 }
 
@@ -290,17 +206,6 @@ function editExpense(id) {
         document.getElementById('expenseName').value = expense.name;
         document.getElementById('expenseAmount').value = expense.amount;
         document.getElementById('expenseCategory').value = expense.category;
-        
-        if (expense.split && expense.split.isplit) {
-            document.getElementById('splitToggle').checked = true;
-            document.getElementById('splitCount').value = expense.split.participants.length;
-            document.getElementById('splitSection').style.display = 'block';
-            updateSplitFields();
-            const inputs = document.querySelectorAll('.split-name');
-            expense.split.participants.forEach((name, idx) => {
-                if (inputs[idx]) inputs[idx].value = name;
-            });
-        }
         
         editingExpenseId = id;
         document.getElementById('addBtn').innerText = "Update Transaction";
@@ -326,22 +231,10 @@ function renderExpenseList(expenses) {
     expenses.forEach(exp => {
         const item = document.createElement('div');
         item.className = 'expense-item';
-        
-        let splitInfo = '';
-        if (exp.split && exp.split.isplit) {
-            splitInfo = `
-                <div style="font-size: 12px; color: #666; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e5ea;">
-                    <strong>Split:</strong> ${exp.split.participants.join(', ')}<br>
-                    <span style="color:var(--accent-blue);">Each pays: ${formatMoney(exp.split.sharePerPerson)}</span>
-                </div>
-            `;
-        }
-        
         item.innerHTML = `
             <div class="expense-info">
                 <span class="expense-name">${exp.name}</span>
                 <span class="expense-category">${exp.category}</span>
-                ${splitInfo}
             </div>
             <div style="display: flex; align-items: center;">
                 <span class="expense-amount" style="margin-right: 12px;">-${formatMoney(exp.amount)}</span>
@@ -361,18 +254,8 @@ function updateChart(data, totalExpenses, balance) {
     if (chartInstance) chartInstance.destroy(); 
     chartInstance = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-            labels: ['Spent', 'Net Leftover'],
-            datasets: [{
-                data: [totalExpenses, chartRemaining],
-                backgroundColor: ['#ff3b30', '#34c759'],
-                borderWidth: 0, hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '75%',
-            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { family: '-apple-system', size: 13 } } } }
-        }
+        data: { labels: ['Spent', 'Net Leftover'], datasets: [{ data: [totalExpenses, chartRemaining], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0, hoverOffset: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { family: '-apple-system', size: 13 } } } } }
     });
 }
 
@@ -381,13 +264,9 @@ function loadStatements() {
     const container = document.getElementById('statementsList');
     const checkboxContainer = document.getElementById('exportMonthCheckboxes');
     
-    container.innerHTML = '';
-    checkboxContainer.innerHTML = '';
+    container.innerHTML = ''; checkboxContainer.innerHTML = '';
 
-    const months = Object.keys(localStorage)
-        .filter(key => key.match(/^\d{4}-\d{2}$/))
-        .sort((a, b) => b.localeCompare(a));
-
+    const months = Object.keys(localStorage).filter(key => key.match(/^\d{4}-\d{2}$/)).sort((a, b) => b.localeCompare(a));
     if (months.length === 0) {
         container.innerHTML = '<p style="color: #8e8e93; text-align: center; padding: 20px;">No historical timelines logged.</p>';
         checkboxContainer.innerHTML = '<p style="font-size: 13px; color: #8e8e93;">No data to export.</p>';
@@ -398,9 +277,7 @@ function loadStatements() {
         const data = JSON.parse(localStorage.getItem(month));
         const totalExpenses = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
         const remaining = data.income - totalExpenses;
-        
-        const dateObj = new Date(month + '-02'); 
-        const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const monthName = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
 
         const cbRow = document.createElement('div');
         cbRow.className = 'checkbox-row';
@@ -428,11 +305,9 @@ function loadStatements() {
 }
 
 function getSelectedMonths() {
-    const checkboxes = document.querySelectorAll('.export-cb:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+    return Array.from(document.querySelectorAll('.export-cb:checked')).map(cb => cb.value);
 }
 
-// Export Professional Excel
 function downloadExcel() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to export.");
@@ -443,8 +318,7 @@ function downloadExcel() {
         if (data) {
             const totalSpent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - totalSpent;
-            const dateObj = new Date(month + '-02');
-            const tabName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+            const tabName = new Date(month + '-02').toLocaleString('default', { month: 'short', year: 'numeric' });
 
             const worksheetData = [
                 ["Monthly Ledger Report", "", "", ""], ["Month", month, "", ""], ["", "", "", ""],
@@ -453,12 +327,7 @@ function downloadExcel() {
                 ["Saved / (Overdraft)", saved, "", ""], ["", "", "", ""],
                 ["Transaction Details", "", "", ""], ["Description", "Category", "Amount (INR)", "Date"]
             ];
-
-            data.expenses.forEach(exp => {
-                const date = new Date(exp.id).toLocaleDateString('en-IN');
-                worksheetData.push([exp.name, exp.category, exp.amount, date]);
-            });
-
+            data.expenses.forEach(exp => { worksheetData.push([exp.name, exp.category, exp.amount, new Date(exp.id).toLocaleDateString('en-IN')]); });
             const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
             worksheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(workbook, worksheet, tabName);
@@ -467,7 +336,6 @@ function downloadExcel() {
     XLSX.writeFile(workbook, `Consolidated_Report_${Date.now()}.xlsx`);
 }
 
-// Share Detailed Text Summary
 async function shareSummary() {
     const selectedMonths = getSelectedMonths();
     if (selectedMonths.length === 0) return alert("Please select at least one month to share.");
@@ -480,15 +348,12 @@ async function shareSummary() {
         if (data) {
             const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - spent;
-            const dateObj = new Date(month + '-02'); 
-            const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+            const monthName = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
 
             summary += `[${monthName}]\n------------------------------\nIncome: ${formatMoney(data.income)}\nSpent: ${formatMoney(spent)}\nSaved: ${formatMoney(saved)}\n`;
-            
             if (data.expenses.length > 0) {
                 summary += `\nTop Transactions:\n`;
-                const sorted = [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
-                sorted.forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`; });
+                [...data.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).forEach(exp => { summary += `- ${exp.name} (${formatMoney(exp.amount)}) [${exp.category}]\n`; });
             } else { summary += `No transactions logged.\n`; }
             summary += `------------------------------\n\n`;
             grandIncome += data.income; grandSpent += spent;
@@ -502,107 +367,129 @@ async function shareSummary() {
     if (navigator.share) {
         try { await navigator.share({ title: 'Consolidated Expense Report', text: summary }); } 
         catch (err) { console.log('Share canceled', err); }
-    } else { alert("Sharing not supported on this device."); }
+    } else { navigator.clipboard.writeText(summary); alert("Copied to clipboard!"); }
 }
 
-// Generate PDF via Browser Print
-function generatePrintReport() {
+// Generate Image Report using html2canvas
+function generateImageReport() {
     const selectedMonths = getSelectedMonths();
-    if (selectedMonths.length === 0) return alert("Please select months for the PDF report.");
+    if (selectedMonths.length === 0) return alert("Please select months for the report.");
 
-    const app = document.getElementById('mainApp');
-    app.classList.add('printing');
-    switchTab('history'); 
+    const reportContainer = document.createElement('div');
+    reportContainer.id = 'tempImageReport';
+    Object.assign(reportContainer.style, { position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', backgroundColor: '#f2f2f7', padding: '40px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
 
-    let printContainer = document.getElementById('printReport');
-    if (!printContainer) {
-        printContainer = document.createElement('div');
-        printContainer.id = 'printReport';
-        app.appendChild(printContainer);
-    }
-    printContainer.innerHTML = `<h1 style="color: black; margin-bottom: 5px;">Consolidated Ledger Report</h1><p class="subtitle" style="margin-bottom: 20px;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>`;
+    let html = `
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <h1 style="margin:0 0 10px 0; color: #1c1c1e;">Consolidated Ledger Report</h1>
+            <p style="margin:0; color: #8e8e93;">Generated: ${new Date().toLocaleDateString('en-IN')}</p>
+        </div>
+    `;
 
     selectedMonths.forEach(month => {
         const data = JSON.parse(localStorage.getItem(month));
         if (data) {
             const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
             const saved = data.income - spent;
-            const dateObj = new Date(month + '-02'); 
-            const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+            const monthName = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            const section = document.createElement('div');
-            section.className = 'print-month-section';
-            section.innerHTML = `
-                <h2>${monthName}</h2>
-                <div class="print-summary-row"><span class="print-summary-label">Monthly Income</span><span class="print-summary-value">${formatMoney(data.income)}</span></div>
-                <div class="print-summary-row"><span class="print-summary-label">Total Expenses</span><span class="print-summary-value negative">${formatMoney(spent)}</span></div>
-                <div class="print-summary-row"><span class="print-summary-label">Saved / Overdraft</span><span class="print-summary-value ${saved >= 0 ? 'positive' : 'negative'}">${formatMoney(saved)}</span></div>
-                <h3 style="margin-top: 20px;">Budget Graph</h3>
-                <div style="height: 200px; margin-bottom: 20px;"><canvas id="printChart_${month}"></canvas></div>
-                <h3>Transaction Ledger</h3>
+            html += `
+                <div style="background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <h2 style="margin: 0 0 20px 0; color: var(--accent-blue); border-bottom: 2px solid #e5e5ea; padding-bottom: 10px;">${monthName}</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
+                            <p style="margin:0 0 5px 0; font-size:12px; color:#8e8e93; text-transform:uppercase;">Income</p>
+                            <p style="margin:0; font-size:20px; font-weight:bold; color:#1c1c1e;">${formatMoney(data.income)}</p>
+                        </div>
+                        <div style="background: #f9f9fb; padding: 15px; border-radius: 8px;">
+                            <p style="margin:0 0 5px 0; font-size:12px; color:#8e8e93; text-transform:uppercase;">Spent</p>
+                            <p style="margin:0; font-size:20px; font-weight:bold; color:var(--red);">${formatMoney(spent)}</p>
+                        </div>
+                        <div style="background: ${saved >= 0 ? '#e4f8eb' : '#ffeaea'}; padding: 15px; border-radius: 8px;">
+                            <p style="margin:0 0 5px 0; font-size:12px; color:#8e8e93; text-transform:uppercase;">Balance</p>
+                            <p style="margin:0; font-size:20px; font-weight:bold; color:${saved >= 0 ? 'var(--green)' : 'var(--red)'};">${formatMoney(saved)}</p>
+                        </div>
+                    </div>
+                    <div style="height: 250px; margin-bottom: 20px;"><canvas id="imgChart_${month}"></canvas></div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <thead><tr style="background: #f2f2f7;"><th style="text-align: left; padding: 10px; border-radius: 8px 0 0 8px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px; border-radius: 0 8px 8px 0;">Amount</th></tr></thead>
+                        <tbody>
+                            ${data.expenses.length === 0 ? `<tr><td colspan="3" style="text-align:center; padding:15px; color:#8e8e93;">No transactions</td></tr>` : ''}
+                            ${data.expenses.map(e => `<tr style="border-bottom: 1px solid #f2f2f7;"><td style="padding:10px;">${e.name}</td><td style="padding:10px; color:#8e8e93;">${e.category}</td><td style="text-align:right; padding:10px; font-weight:600; color:var(--red);">-${formatMoney(e.amount)}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
-            
-            const table = document.createElement('table');
-            table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.fontSize = '14px'; table.style.marginBottom = '20px';
-            table.innerHTML = `<thead><tr style="background: #fafafa; border-bottom: 1px solid #e5e5ea;"><th style="text-align: left; padding: 10px;">Item</th><th style="text-align: left; padding: 10px;">Category</th><th style="text-align: right; padding: 10px;">Amount</th></tr></thead>`;
-            
-            const tbody = document.createElement('tbody');
-            if (data.expenses.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 15px;">No transactions logged.</td></tr>`;
-            } else {
-                data.expenses.forEach(exp => {
-                    tbody.innerHTML += `<tr style="border-bottom: 1px solid #e5e5ea;"><td style="padding: 10px;">${exp.name}</td><td style="padding: 10px;">${exp.category}</td><td style="text-align: right; padding: 10px; color: var(--red); font-weight: 600;">-${formatMoney(exp.amount)}</td></tr>`;
-                });
-            }
-            table.appendChild(tbody);
-            section.appendChild(table);
-            printContainer.appendChild(section);
+        }
+    });
 
-            const ctx = document.getElementById(`printChart_${month}`).getContext('2d');
-            new Chart(ctx, {
+    reportContainer.innerHTML = html;
+    document.body.appendChild(reportContainer);
+
+    selectedMonths.forEach(month => {
+        const data = JSON.parse(localStorage.getItem(month));
+        if(data) {
+            const spent = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const saved = Math.max(0, data.income - spent);
+            new Chart(document.getElementById(`imgChart_${month}`).getContext('2d'), {
                 type: 'doughnut',
-                data: { labels: ['Spent', 'Remaining'], datasets: [{ data: [spent, Math.max(0, saved)], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { family: '-apple-system', size: 12 } } } } }
+                data: { labels: ['Spent', 'Remaining'], datasets: [{ data: [spent, saved], backgroundColor: ['#ff3b30', '#34c759'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', animation: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true } } } }
             });
         }
     });
 
-    document.body.offsetHeight; // Force reflow
-    window.print();
-    app.classList.remove('printing');
-    if (printContainer) printContainer.remove();
+    setTimeout(() => {
+        html2canvas(reportContainer, { scale: 2, useCORS: true, backgroundColor: '#f2f2f7' }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Expense_Report_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            document.body.removeChild(reportContainer);
+        }).catch(e => { console.error(e); alert("Image generation failed."); document.body.removeChild(reportContainer); });
+    }, 500);
 }
 
 document.getElementById('monthSelector').addEventListener('change', loadData);
 
-// --- SPLIT EXPENSE FEATURE ---
-function updateSplitParticipantFields() {
-    const count = parseInt(document.getElementById('splitParticipantCount').value) || 2;
+// --- UNIVERSAL IMAGE DOWNLOAD HELPER ---
+function downloadElementAsImage(elementId, filename) {
+    const element = document.getElementById(elementId);
+    if(!element) return;
+    html2canvas(element, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${filename}_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => { console.error(err); alert('Failed to generate image.'); });
+}
+
+// --- SPLIT EXPENSE APP FEATURE ---
+window.currentSplitState = null;
+
+function addSplitParticipantField() {
     const container = document.getElementById('splitParticipantsList');
-    container.innerHTML = '';
-    for (let i = 0; i < count; i++) {
-        const div = document.createElement('div');
-        div.style.marginBottom = '12px';
-        div.innerHTML = `<label style="font-size: 13px; color: #666; font-weight: 500;">Person ${i + 1}:</label><input type="text" class="split-participant-name" placeholder="Name (e.g., John)" style="width: 100%; margin-top: 6px;">`;
-        container.appendChild(div);
-    }
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'split-participant-name';
+    input.placeholder = `Person ${container.children.length + 1}`;
+    container.appendChild(input);
 }
 
 function resetSplitForm() {
     document.getElementById('splitExpenseName').value = '';
     document.getElementById('splitExpenseAmount').value = '';
-    document.getElementById('splitParticipantCount').value = '2';
-    document.getElementById('splitParticipantsList').innerHTML = '';
-    document.getElementById('splitAmountPerPerson').innerText = '₹0';
-    document.getElementById('splitSummaryOutput').classList.add('hidden');
-    updateSplitParticipantFields();
+    const container = document.getElementById('splitParticipantsList');
+    container.innerHTML = '<input type="text" class="split-participant-name" placeholder="Person 1 (e.g., You)"><input type="text" class="split-participant-name" placeholder="Person 2">';
+    document.getElementById('splitResultCard').classList.add('hidden');
+    document.getElementById('groupActionArea').classList.add('hidden');
+    window.currentSplitState = null;
 }
 
-function generateSplitSummary() {
-    const expenseName = document.getElementById('splitExpenseName').value.trim();
-    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
-    
-    if (!expenseName || !totalAmount || totalAmount <= 0) return alert('Please enter expense name and valid amount');
+function calculateQuickSplit() {
+    const name = document.getElementById('splitExpenseName').value.trim();
+    const total = parseFloat(document.getElementById('splitExpenseAmount').value);
+    if (!name || !total || total <= 0) return alert('Please enter expense description and valid amount');
     
     const participants = [];
     document.querySelectorAll('.split-participant-name').forEach(input => {
@@ -611,99 +498,63 @@ function generateSplitSummary() {
     
     if (participants.length < 2) return alert('Please add at least 2 participants');
     
-    const amountPerPerson = (totalAmount / participants.length).toFixed(2);
-    document.getElementById('splitAmountPerPerson').innerText = formatMoney(amountPerPerson);
+    const perPerson = total / participants.length;
     
-    let summaryText = `💰 EXPENSE SPLIT SUMMARY\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nExpense: ${expenseName}\nTotal Amount: ${formatMoney(totalAmount)}\nNumber of People: ${participants.length}\nAmount per Person: ${formatMoney(amountPerPerson)}\n\nParticipants & Amounts:\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    participants.forEach((name, idx) => { summaryText += `${idx + 1}. ${name}: ${formatMoney(amountPerPerson)}\n`; });
-    summaryText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nGenerated: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}\n`;
-    
-    document.getElementById('splitSummaryText').innerText = summaryText;
-    document.getElementById('splitSummaryOutput').classList.remove('hidden');
-}
-
-function copySplitSummary() {
-    const summaryText = document.getElementById('splitSummaryText').innerText;
-    navigator.clipboard.writeText(summaryText).then(() => { alert('Summary copied to clipboard!'); })
-    .catch(err => { console.error('Failed to copy:', err); });
-}
-
-function shareSplitSummary() {
-    const expenseName = document.getElementById('splitExpenseName').value;
-    const summaryText = document.getElementById('splitSummaryText').innerText;
-    
-    if (navigator.share) {
-        navigator.share({ title: `Split Expense: ${expenseName}`, text: summaryText }).catch(err => console.log('Share canceled:', err));
-    } else { alert('Sharing not supported. Use "Copy to Clipboard" instead.'); }
-}
-
-function exportSplitPDF() {
-    const expenseName = document.getElementById('splitExpenseName').value.trim();
-    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
-    const participants = [];
-    
-    document.querySelectorAll('.split-participant-name').forEach(input => {
-        if (input.value.trim()) participants.push(input.value.trim());
-    });
-
-    if (!expenseName || !totalAmount || participants.length < 2) return alert('Please complete the split expense details');
-    const amountPerPerson = (totalAmount / participants.length).toFixed(2);
-
-    const pdfContainer = document.createElement('div');
-    pdfContainer.id = 'splitPdfContent';
-    Object.assign(pdfContainer.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999', backgroundColor:'#ffffff', padding:'40px', fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
-
-    const htmlContent = `
-        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #007aff; padding-bottom: 20px;">
-            <h1 style="color: #1c1c1e; margin: 0 0 10px 0; font-size: 32px;">💰 Expense Split Receipt</h1>
-            <p style="color: #8e8e93; margin: 0; font-size: 14px;">Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN')}</p>
+    const receipt = document.getElementById('splitReceipt');
+    receipt.innerHTML = `
+        <div style="text-align: center; border-bottom: 2px dashed #e5e5ea; padding-bottom: 16px; margin-bottom: 16px;">
+            <p style="margin: 0 0 4px 0; color: #8e8e93; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Split Bill Receipt</p>
+            <h2 style="margin: 0 0 8px 0; color: #1c1c1e; font-size: 24px;">${name}</h2>
+            <p style="margin: 0; font-size: 32px; font-weight: bold; color: var(--accent-blue); letter-spacing: -1px;">${formatMoney(total)}</p>
+            <p style="margin: 4px 0 0 0; color: #8e8e93; font-size: 14px;">Split evenly ${participants.length} ways</p>
         </div>
-        <div style="background: linear-gradient(135deg, #007aff, #005bb5); color: white; padding: 25px; border-radius: 12px; margin-bottom: 30px;">
-            <h2 style="color: white; margin: 0 0 15px 0; font-size: 24px;">${expenseName}</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div><p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Total Amount</p><p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(totalAmount)}</p></div>
-                <div><p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase;">Amount Per Person</p><p style="margin: 0; font-size: 28px; font-weight: bold;">${formatMoney(amountPerPerson)}</p></div>
-            </div>
+        <div style="font-size: 15px;">
+            ${participants.map(p => `
+                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f2f7;">
+                    <span style="font-weight: 500; color: #1c1c1e;">${p}</span>
+                    <span style="font-weight: 600; color: var(--green);">${formatMoney(perPerson)}</span>
+                </div>
+            `).join('')}
         </div>
-        <h3 style="color: #1c1c1e; margin: 25px 0 15px 0; font-size: 18px; border-bottom: 2px solid #e5e5ea; padding-bottom: 10px;">Participant Breakdown</h3>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <thead><tr style="background: #f2f2f7; border-bottom: 2px solid #e5e5ea;"><th style="text-align: left; padding: 12px; color: #1c1c1e; font-weight: 600;">Participant</th><th style="text-align: right; padding: 12px; color: #1c1c1e; font-weight: 600;">Amount to Pay</th></tr></thead>
-            <tbody>
-                ${participants.map((name, idx) => `<tr style="border-bottom: 1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}"><td style="padding: 12px; color: #1c1c1e; font-weight: 500;">${idx + 1}. ${name}</td><td style="padding: 12px; text-align: right; color: #007aff; font-weight: 600; font-size: 16px;">${formatMoney(amountPerPerson)}</td></tr>`).join('')}
-            </tbody>
-        </table>
-        <div style="background: #f0f7ff; border-left: 4px solid #007aff; padding: 15px; margin-top: 30px; border-radius: 4px;">
-            <p style="margin: 0; color: #1c1c1e; font-size: 13px;"><strong>Note:</strong> Each participant should pay the amount listed above. Total of all payments should equal ${formatMoney(totalAmount)}.</p>
+        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #8e8e93;">
+            Generated via Expense Tracker • ${new Date().toLocaleDateString('en-IN')}
         </div>
     `;
 
-    pdfContainer.innerHTML = htmlContent;
-    document.body.appendChild(pdfContainer);
-
-    const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `Split_Expense_${expenseName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
-    html2pdf().set(opt).from(pdfContainer).save().then(() => {
-        document.body.removeChild(pdfContainer);
-    }).catch(err => {
-        console.error('PDF generation failed:', err);
-        alert('PDF export failed. Please try again.');
-        if (document.body.contains(pdfContainer)) document.body.removeChild(pdfContainer);
-    });
+    document.getElementById('splitResultCard').classList.remove('hidden');
+    document.getElementById('groupActionArea').classList.remove('hidden');
+    window.currentSplitState = { name, total, participants, perPerson };
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('splitParticipantsList')) updateSplitParticipantFields();
-    loadSplitGroups();
-    const sel = document.getElementById('splitGroupSelect'); 
-    if (sel && sel.value) loadGroupExpenses(sel.value);
-});
+function shareQuickSplitText() {
+    if(!window.currentSplitState) return;
+    const { name, total, participants, perPerson } = window.currentSplitState;
+    let text = `💰 ${name} - ${formatMoney(total)}\nSplit ${participants.length} ways:\n\n`;
+    participants.forEach(p => text += `${p} owes ${formatMoney(perPerson)}\n`);
+    if (navigator.share) { navigator.share({ title: `Split: ${name}`, text }).catch(err => console.log('Share canceled:', err)); } 
+    else { navigator.clipboard.writeText(text); alert("Copied to clipboard!"); }
+}
+
+function addCurrentSplitToGroup() {
+    const groupId = document.getElementById('splitGroupSelect').value;
+    if (!groupId) return alert('Please create or select a group in the Group Balances section first.');
+    if (!window.currentSplitState) return alert('Calculate a split first.');
+
+    const { name, total, participants, perPerson } = window.currentSplitState;
+    const expense = {
+        id: Date.now().toString(), name: name, total: total,
+        participants: participants.map(p => ({ name: p, share: perPerson, paid: false })),
+        createdAt: new Date().toISOString()
+    };
+
+    const key = `split_group_${groupId}`;
+    const list = JSON.parse(localStorage.getItem(key)) || [];
+    list.unshift(expense);
+    localStorage.setItem(key, JSON.stringify(list));
+    loadGroupExpenses(groupId);
+    alert('Split successfully added to the active group ledger!');
+    resetSplitForm();
+}
 
 // --- SPLIT GROUP MANAGEMENT ---
 function loadSplitGroups() {
@@ -729,34 +580,8 @@ function createSplitGroup() {
     localStorage.setItem('split_groups', JSON.stringify(groups));
     document.getElementById('newSplitGroupName').value = '';
     loadSplitGroups();
-}
-
-function addSplitToGroup() {
-    const groupId = document.getElementById('splitGroupSelect').value;
-    if (!groupId) return alert('Select a group (or create one) first');
-
-    const expenseName = document.getElementById('splitExpenseName').value.trim();
-    const totalAmount = parseFloat(document.getElementById('splitExpenseAmount').value);
-    if (!expenseName || !totalAmount || totalAmount <= 0) return alert('Enter an expense name and valid amount');
-
-    const participants = [];
-    document.querySelectorAll('.split-participant-name').forEach(input => {
-        if (input.value.trim()) participants.push({ name: input.value.trim(), paid: false });
-    });
-    if (participants.length < 2) return alert('Add at least two participants');
-
-    const share = parseFloat((totalAmount / participants.length).toFixed(2));
-    const expense = {
-        id: Date.now().toString(), name: expenseName, total: totalAmount,
-        participants: participants.map(p => ({ name: p.name, share, paid: false })),
-        createdAt: new Date().toISOString()
-    };
-
-    const key = `split_group_${groupId}`;
-    const list = JSON.parse(localStorage.getItem(key)) || [];
-    list.unshift(expense);
-    localStorage.setItem(key, JSON.stringify(list));
-    loadGroupExpenses(groupId);
+    document.getElementById('splitGroupSelect').value = id;
+    loadGroupExpenses(id);
 }
 
 function loadGroupExpenses(groupId) {
@@ -771,51 +596,53 @@ function renderGroupExpenses(groupId, expenses) {
     if (!container) return;
     container.innerHTML = '';
     if (!expenses || expenses.length === 0) {
-        container.innerHTML = '<p style="color:#8e8e93; font-size:14px; text-align:center; padding: 12px;">No split expenses for this group.</p>';
+        container.innerHTML = '<div style="text-align:center; padding: 24px; border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-secondary);">No expenses in this group yet. Use the Quick Split Calculator above to add one.</div>';
         return;
     }
 
     expenses.forEach(exp => {
         const card = document.createElement('div');
-        card.className = 'card split-group-expense';
+        card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = '12px';
+        card.style.padding = '16px';
         card.style.marginBottom = '12px';
 
         let participantsHtml = '';
         exp.participants.forEach((p, idx) => {
             const paidAmount = p.paidAmount ? parseFloat(p.paidAmount) : 0;
             participantsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom: 1px solid var(--border-color); gap:12px;">
-                    <div style="flex:1; font-weight: 500; font-size: 14px;">${idx+1}. ${p.name}</div>
-                    <div style="width:100px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:8px; border-radius:8px; margin-bottom: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom: 1px solid #f2f2f7; gap:8px;">
+                    <div style="flex:1; font-weight: 500; font-size: 14px;">${p.name}</div>
+                    <div style="width:80px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${p.share}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantShare(this)" style="width:100%; padding:6px; border-radius:6px; margin-bottom: 0; font-size: 13px;">
                     </div>
-                    <div style="width:100px; text-align:right;">
-                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:8px; border-radius:8px; margin-bottom: 0;">
+                    <div style="width:80px; text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${paidAmount}" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" onchange="saveParticipantPaidAmount(this)" placeholder="Paid" style="width:100%; padding:6px; border-radius:6px; margin-bottom: 0; font-size: 13px;">
                     </div>
-                    <div style="width:36px; text-align:center;">
-                        <input type="checkbox" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)" style="width: 20px; height: 20px; accent-color: var(--green);">
+                    <div style="width:30px; text-align:center;">
+                        <input type="checkbox" data-group="${groupId}" data-exp="${exp.id}" data-idx="${idx}" ${p.paid? 'checked':''} onchange="toggleParticipantPaid(this)" style="width: 18px; height: 18px; accent-color: var(--green);">
                     </div>
                 </div>
             `;
         });
 
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
                 <div>
-                    <div style="font-weight:700; font-size: 16px;">${exp.name}</div>
-                    <div style="font-size:13px; color:var(--text-secondary);">Total: ${formatMoney(exp.total)}</div>
+                    <div style="font-weight:700; font-size: 16px; color: var(--text-primary);">${exp.name}</div>
+                    <div style="font-size:13px; color:var(--text-secondary); margin-top: 2px;">Total: ${formatMoney(exp.total)}</div>
                 </div>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:6px;">
                     <button class="btn btn-secondary btn-sm" onclick="equalizeShares('${groupId}','${exp.id}')">Equalize</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteGroupExpense('${groupId}','${exp.id}')">Delete</button>
                 </div>
             </div>
             <div>
-                <div style="display:flex; gap:12px; font-size:13px; color:var(--text-secondary); margin-bottom:6px; font-weight: 500;">
+                <div style="display:flex; gap:8px; font-size:12px; color:var(--text-secondary); margin-bottom:6px; font-weight: 600; text-transform: uppercase;">
                     <div style="flex:1">Participant</div>
-                    <div style="width:100px; text-align:right;">Share (₹)</div>
-                    <div style="width:100px; text-align:right;">Paid (₹)</div>
-                    <div style="width:36px; text-align:center;">Done</div>
+                    <div style="width:80px; text-align:right;">Owes</div>
+                    <div style="width:80px; text-align:right;">Paid</div>
+                    <div style="width:30px; text-align:center;">Done</div>
                 </div>
                 ${participantsHtml}
             </div>
@@ -872,7 +699,7 @@ function toggleParticipantPaid(checkbox) {
 }
 
 function deleteGroupExpense(groupId, expId) {
-    if (!confirm('Delete this split expense?')) return;
+    if (!confirm('Delete this split expense from the ledger?')) return;
     const key = `split_group_${groupId}`;
     let list = JSON.parse(localStorage.getItem(key)) || [];
     list = list.filter(e => e.id !== expId);
@@ -880,18 +707,15 @@ function deleteGroupExpense(groupId, expId) {
     loadGroupExpenses(groupId);
 }
 
-function generateSelectedGroupReport() {
+// Generate Group Ledger Image Report
+function generateGroupImageReport() {
     const groupId = document.getElementById('splitGroupSelect').value;
     if (!groupId) return alert('Select a group first');
-    generateGroupReportPDF(groupId);
-}
-
-function generateGroupReportPDF(groupId) {
+    
     const groups = JSON.parse(localStorage.getItem('split_groups')) || [];
     const group = groups.find(g=>g.id===groupId);
-    if (!group) return alert('Group not found');
-    const key = `split_group_${groupId}`;
-    const expenses = JSON.parse(localStorage.getItem(key)) || [];
+    if (!group) return;
+    const expenses = JSON.parse(localStorage.getItem(`split_group_${groupId}`)) || [];
 
     const map = {};
     expenses.forEach(exp => {
@@ -899,55 +723,47 @@ function generateGroupReportPDF(groupId) {
             if (!map[p.name]) map[p.name] = { owed: 0, paid: 0 };
             const share = parseFloat(p.share) || 0;
             const paidAmt = p.paidAmount ? parseFloat(p.paidAmount) : (p.paid ? share : 0);
-            map[p.name].owed += share;
-            map[p.name].paid += paidAmt;
+            map[p.name].owed += share; map[p.name].paid += paidAmt;
         });
     });
 
+    const reportContainer = document.getElementById('hiddenGroupReport');
+    Object.assign(reportContainer.style, { width: '800px', backgroundColor: '#ffffff', padding: '40px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
+
     let html = `
-        <div style="padding:40px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto, sans-serif;">
-            <div style="text-align:center; margin-bottom:30px; border-bottom: 2px solid #007aff; padding-bottom: 20px;">
-                <h1 style="margin:0; font-size: 32px; color: #1c1c1e;">${group.name} — Split Report</h1>
-                <p style="color:#8e8e93; margin:8px 0 0 0; font-size: 14px;">Generated: ${new Date().toLocaleString()}</p>
-            </div>
-            <h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e;">Participant Summary</h3>
-            <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom: 30px;">
-                <thead><tr style="background:#f2f2f7; border-bottom: 2px solid #e5e5ea;"><th style="text-align:left; padding:12px;">Participant</th><th style="text-align:right; padding:12px;">Owed</th><th style="text-align:right; padding:12px;">Paid</th><th style="text-align:right; padding:12px;">Remaining</th></tr></thead>
-                <tbody>
+        <div style="text-align:center; margin-bottom:30px; border-bottom: 2px solid var(--accent-blue); padding-bottom: 20px;">
+            <h1 style="margin:0; font-size: 36px; color: #1c1c1e; letter-spacing: -1px;">${group.name} Ledger</h1>
+            <p style="color:#8e8e93; margin:8px 0 0 0; font-size: 14px;">As of ${new Date().toLocaleDateString('en-IN')}</p>
+        </div>
+        <h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Participant Balances</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:15px; margin-bottom: 40px;">
+            <thead><tr style="background:#f2f2f7;"><th style="text-align:left; padding:12px; border-radius: 8px 0 0 8px;">Participant</th><th style="text-align:right; padding:12px;">Total Owed</th><th style="text-align:right; padding:12px;">Amount Paid</th><th style="text-align:right; padding:12px; border-radius: 0 8px 8px 0;">Remaining Balance</th></tr></thead>
+            <tbody>
     `;
     Object.keys(map).forEach((name, idx) => {
         const owed = map[name].owed; const paid = map[name].paid; const rem = owed - paid;
-        html += `<tr style="border-bottom:1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #f9f9fb;' : ''}"><td style="padding:12px; font-weight: 500;">${name}</td><td style="padding:12px; text-align:right;">${formatMoney(owed)}</td><td style="padding:12px; text-align:right;">${formatMoney(paid)}</td><td style="padding:12px; text-align:right; font-weight: 600; color: ${rem > 0 ? '#ff3b30' : '#34c759'};">${formatMoney(rem)}</td></tr>`;
+        html += `<tr style="border-bottom:1px solid #e5e5ea; ${idx % 2 === 0 ? 'background: #fafafa;' : ''}"><td style="padding:12px; font-weight: 600;">${name}</td><td style="padding:12px; text-align:right;">${formatMoney(owed)}</td><td style="padding:12px; text-align:right;">${formatMoney(paid)}</td><td style="padding:12px; text-align:right; font-weight: 700; color: ${rem > 0 ? 'var(--red)' : 'var(--green)'};">${formatMoney(rem)}</td></tr>`;
     });
-
-    html += `</tbody></table><h3 style="margin-top:30px; font-size: 20px; color: #1c1c1e;">Detailed Expenses</h3>`;
+    html += `</tbody></table><h3 style="margin-top:20px; font-size: 20px; color: #1c1c1e; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">Expense History</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">`;
 
     expenses.forEach(exp=>{
         html += `
-            <div style="border:1px solid #e5e5ea; padding:16px; border-radius:12px; margin-bottom:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px dashed #e5e5ea; padding-bottom: 10px; margin-bottom: 10px;"><div style="font-weight:700; font-size: 16px;">${exp.name}</div><div style="font-weight:700; color:#ff3b30; font-size: 16px;">${formatMoney(exp.total)}</div></div>
-                <div>
-                    ${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0; font-size: 14px;'><div style="color: #666;">${p.name}${p.paid? ' <span style="color: #34c759;">(Paid)</span>':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}
-                </div>
+            <div style="border:1px solid #e5e5ea; padding:20px; border-radius:12px; background: #fafafa;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px dashed #d1d1d6; padding-bottom: 12px; margin-bottom: 12px;"><div style="font-weight:700; font-size: 18px;">${exp.name}</div><div style="font-weight:700; color:var(--accent-blue); font-size: 18px;">${formatMoney(exp.total)}</div></div>
+                <div>${exp.participants.map(p=>`<div style='display:flex; justify-content:space-between; padding:6px 0; font-size: 14px;'><div style="color: #1c1c1e; font-weight: 500;">${p.name}${p.paid? ' <span style="color: var(--green); font-size: 12px; margin-left: 4px;">(Settled)</span>':''}</div><div style='font-weight:600'>${formatMoney(p.share)}</div></div>`).join('')}</div>
             </div>
         `;
     });
     html += '</div>';
+    reportContainer.innerHTML = html;
 
-    const container = document.createElement('div');
-    container.id = 'groupPdfContent';
-    Object.assign(container.style, { position:'fixed', left:'0', top:'0', width:'800px', opacity:'0', pointerEvents:'none', zIndex:'9999', backgroundColor: '#fff' });
-    container.innerHTML = html;
-    document.body.appendChild(container);
-
-    const opt = {
-        margin: [10,10,10,10],
-        filename: `${group.name.replace(/\s+/g,'_')}_Report_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:{ type:'jpeg', quality:0.98 },
-        html2canvas:{ scale:2, useCORS:true },
-        jsPDF:{ orientation:'portrait', unit:'mm', format:'a4' }
-    };
-
-    html2pdf().set(opt).from(container).save().then(()=>{ container.remove(); })
-    .catch(err=>{ console.error(err); container.remove(); alert('Failed to export group PDF'); });
+    setTimeout(() => {
+        html2canvas(reportContainer, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `${group.name.replace(/\s+/g,'_')}_Ledger.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            reportContainer.innerHTML = '';
+        });
+    }, 100);
 }
