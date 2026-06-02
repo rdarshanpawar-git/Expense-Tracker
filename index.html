@@ -35,7 +35,6 @@
         </div>
 
         <div id="tabHome">
-            
             <input type="month" id="monthSelector">
 
             <div class="balance-card">
@@ -63,12 +62,7 @@
                 
                 <input type="text" id="expenseCategory" list="categoryOptions" placeholder="Category (Select or Type Custom)">
                 <datalist id="categoryOptions">
-                    <option value="Food & Dining">
-                    <option value="Transportation">
-                    <option value="Utilities & Bills">
-                    <option value="Shopping">
-                    <option value="Entertainment">
-                </datalist>
+                    </datalist>
 
                 <button id="addBtn" onclick="addExpense()">Add Transaction</button>
             </div>
@@ -82,6 +76,20 @@
         <div id="tabHistory" class="hidden">
             <h1>Past Statements</h1>
             <div class="subtitle">Your previous monthly records</div>
+
+            <div class="card">
+                <h3>Export & Share</h3>
+                <p class="subtitle" style="margin-bottom: 10px;">Select months for a consolidated report:</p>
+                
+                <div id="exportMonthCheckboxes" class="checkbox-container">
+                    </div>
+                
+                <div class="flex-row">
+                    <button onclick="downloadCSV()" class="btn-green">Download CSV</button>
+                    <button onclick="shareSummary()">Share via App</button>
+                </div>
+            </div>
+
             <div id="statementsList"></div>
         </div>
 
