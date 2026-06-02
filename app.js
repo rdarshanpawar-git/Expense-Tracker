@@ -1215,3 +1215,17 @@ async function runPdfSmokeCheck() {
         alert('Smoke-check error: ' + e.message);
     }
 }
+
+// --- EXPOSE HANDLERS TO GLOBAL SCOPE FOR INLINE ONCLICK USAGE ---
+window.handleLogin = handleLogin;
+window.resetPin = resetPin;
+window.updateLoginHints = updateLoginHints;
+
+// Initialize login hints when DOM loads
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        window.updateLoginHints();
+    } catch (e) {
+        console.warn('updateLoginHints on DOMContentLoaded failed:', e);
+    }
+});
